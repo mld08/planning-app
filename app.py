@@ -1,3 +1,4 @@
+import base64
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail
@@ -8,8 +9,9 @@ import os
 from io import BytesIO
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
@@ -399,28 +401,120 @@ def archiver_planning(planning_id):
 @app.route('/admin/plannings/<int:planning_id>/export/pdf')
 @login_required
 def export_planning_pdf(planning_id):
-    """Exporter un planning en PDF"""
+    """Exporter un planning en PDF avec en-tête institutionnel (image après la devise)"""
     planning = Planning.query.get_or_404(planning_id)
     
-    # Créer le PDF
+    # === Configuration du document ===
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
     elements = []
     
-    # Styles
+    # === Styles ===
     styles = getSampleStyleSheet()
-    
-    # Titre
-    titre = Paragraph(f"<b>Planning Semaine {planning.semaine}/{planning.annee}</b><br/>"
-                     f"{planning.periode}", styles['Title'])
+    style_center = ParagraphStyle(name='center', alignment=TA_CENTER, fontSize=10, leading=12)
+    style_title = styles['Title']
+
+    # === Chargement des images ===
+    logo_img = None
+    sig_img = None
+    try:
+        with open("static/img/dpsp.png", "rb") as f:
+            logo_bytes = f.read()
+            logo_img = Image(BytesIO(logo_bytes))
+            logo_img.drawHeight = 40
+            logo_img.drawWidth = 40
+    except Exception:
+        logo_img = None
+
+    try:
+        with open("static/img/senegal.jpg", "rb") as f:
+            sig_bytes = f.read()
+            sig_img = Image(BytesIO(sig_bytes))
+            sig_img.drawHeight = 22
+            sig_img.drawWidth = 22
+    except Exception:
+        sig_img = None
+
+    # === Construire la colonne gauche ===
+    # Le texte avant et après l’image sont séparés pour insérer l’image au bon endroit
+    haut_text = (
+        "<strong>République du Sénégal</strong><br/>"
+        "<em>Un Peuple – Un But – Une Foi</em><br/>"
+    )
+    haut_para = Paragraph(haut_text, style_center)
+
+    bas_text = (
+        "★★★★★<br/>"
+        "MINISTÈRE DES PÊCHES ET<br/>DE L’ÉCONOMIE MARITIME<br/>"
+        "★★★★★<br/>Direction de la Protection et de la<br/>Surveillance des Pêches (DPSP)"
+    )
+    bas_para = Paragraph(bas_text, style_center)
+
+    # Table imbriquée pour : texte haut → image → texte bas
+    if sig_img:
+        gauche_col = Table(
+            [[haut_para], [sig_img], [bas_para]],
+            colWidths=[doc.width/3 - 10]
+        )
+        gauche_col.setStyle(TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+            ('BOX', (0,0), (-1,-1), 0, colors.white)
+        ]))
+    else:
+        gauche_col = Paragraph(
+            haut_text + "★★★★★<br/>" + bas_text,
+            style_center
+        )
+
+    # Centre vide
+    centre_vide = Paragraph("", style_center)
+
+    # Colonne droite (logo)
+    if logo_img:
+        droite_col = Table([[logo_img]], colWidths=[doc.width/3 - 10])
+        droite_col.setStyle(TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('BOX', (0,0), (-1,-1), 0, colors.white)
+        ]))
+    else:
+        droite_col = Paragraph("", style_center)
+
+    # Table principale de l'en-tête
+    entete_table = Table(
+        [[gauche_col, centre_vide, droite_col]],
+        colWidths=[doc.width/3, doc.width/3, doc.width/3]
+    )
+    entete_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('BOX', (0,0), (-1,-1), 0, colors.white)
+    ]))
+
+    elements.append(entete_table)
+    elements.append(Spacer(1, 10))
+
+    # Ligne de séparation sous l'en-tête
+    # hr = Table([['']], colWidths=[doc.width])
+    # hr.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 1, colors.black)]))
+    # elements.append(hr)
+    # elements.append(Spacer(1, 10))
+
+    # === Titre du planning ===
+    titre = Paragraph(
+        f"<b>Planning Semaine {planning.semaine}/{planning.annee}</b><br/>{planning.periode}",
+        style_title
+    )
     elements.append(titre)
-    elements.append(Spacer(1, 20))
-    
-    # Données du tableau
+    elements.append(Spacer(1, 12))
+
+    # === Tableau principal ===
     jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
     data = [['Agent'] + jours_semaine]
     
-    # Récupérer tous les agents affectés
     agents = db.session.query(User).join(Affectation).filter(
         Affectation.planning_id == planning.id
     ).distinct().all()
@@ -439,13 +533,10 @@ def export_planning_pdf(planning_id):
                 cell_text = f"{aff.shift.upper()}\n{aff.equipe}\n{aff.horaire}"
             else:
                 cell_text = "Repos"
-            
             row.append(cell_text)
-        
         data.append(row)
     
-    # Créer le tableau
-    table = Table(data)
+    table = Table(data, repeatRows=1)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -454,7 +545,7 @@ def export_planning_pdf(planning_id):
         ('FONTSIZE', (0, 0), (-1, 0), 12),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
         ('FONTSIZE', (0, 1), (-1, -1), 8),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
