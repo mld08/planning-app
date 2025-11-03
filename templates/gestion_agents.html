@@ -9,20 +9,22 @@
         <h1 class="text-3xl font-bold text-gray-900">
             <i class="fas fa-users mr-2 text-blue-600"></i>Gestion des agents
         </h1>
-        <a href="{{ url_for('ajouter_agent') }}" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105">
+        <a href="{{ url_for('ajouter_agent') }}"
+            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105">
             <i class="fas fa-user-plus mr-2"></i>Ajouter un agent
         </a>
     </div>
-    
+
     <!-- Statistiques rapides -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
             <p class="text-sm text-gray-600">Total agents</p>
-            <p class="text-2xl font-bold text-gray-800">{{ agents|length }}</p>
+            <p class="text-2xl font-bold text-gray-800">{{ all_agents|length }}</p>
         </div>
         <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
             <p class="text-sm text-gray-600">Disponibles</p>
-            <p class="text-2xl font-bold text-gray-800">{{ agents|selectattr('disponibilite', 'equalto', True)|list|length }}</p>
+            <p class="text-2xl font-bold text-gray-800">{{ agents|selectattr('disponibilite', 'equalto',
+                True)|list|length }}</p>
         </div>
         <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
             <p class="text-sm text-gray-600">En service jour</p>
@@ -33,7 +35,7 @@
             <p class="text-2xl font-bold text-gray-800">{{ agents|sum(attribute='compteur_nuit') }}</p>
         </div>
     </div>
-    
+
     <!-- Liste des agents -->
     <div class="bg-white rounded-lg shadow-lg overflow-hidden">
         {% if agents %}
@@ -45,7 +47,7 @@
                             Agent
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Username
+                            Genre
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Fonction
@@ -71,27 +73,31 @@
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-10 w-10">
                                     <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <span class="text-blue-600 font-bold text-sm">{{ agent.prenom[0] }}{{ agent.nom[0] }}</span>
+                                        <span class="text-blue-600 font-bold text-sm">{{ agent.prenom[0] }}{{
+                                            agent.nom[0] }}</span>
                                     </div>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">{{ agent.prenom }} {{ agent.nom }}</div>
+                                    <div class="text-sm font-medium text-gray-900">{{ agent.prenom }} {{ agent.nom }}
+                                    </div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ agent.username }}</div>
+                            <div class="text-sm text-gray-900">{{ agent.genre }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">{{ agent.fonction or 'N/A' }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% if agent.disponibilite %}
-                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <span
+                                class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                 <i class="fas fa-check-circle mr-1"></i> Disponible
                             </span>
                             {% else %}
-                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            <span
+                                class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                                 <i class="fas fa-times-circle mr-1"></i> Indisponible
                             </span>
                             {% endif %}
@@ -110,17 +116,21 @@
                             {% if agent.dernier_shift %}
                             <span class="text-sm text-gray-600">{{ agent.dernier_shift.capitalize() }}</span>
                             {% if agent.derniere_affectation %}
-                            <br><span class="text-xs text-gray-400">{{ agent.derniere_affectation.strftime('%d/%m/%Y') }}</span>
+                            <br><span class="text-xs text-gray-400">{{ agent.derniere_affectation.strftime('%d/%m/%Y')
+                                }}</span>
                             {% endif %}
                             {% else %}
                             <span class="text-sm text-gray-400">Aucun</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="{{ url_for('modifier_agent', agent_id=agent.id) }}" class="text-blue-600 hover:text-blue-900 mr-3">
+                            <a href="{{ url_for('modifier_agent', agent_id=agent.id) }}"
+                                class="text-blue-600 hover:text-blue-900 mr-3">
                                 <i class="fas fa-edit"></i> Modifier
                             </a>
-                            <form method="POST" action="{{ url_for('supprimer_agent', agent_id=agent.id) }}" class="inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet agent ?');">
+                            <form method="POST" action="{{ url_for('supprimer_agent', agent_id=agent.id) }}"
+                                class="inline"
+                                onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet agent ?');">
                                 <button type="submit" class="text-red-600 hover:text-red-900">
                                     <i class="fas fa-trash"></i> Supprimer
                                 </button>
@@ -131,11 +141,48 @@
                 </tbody>
             </table>
         </div>
+        {% if pagination.pages > 1 %}
+        <div class="bg-white px-6 py-4 flex justify-center items-center space-x-2 border-t border-gray-200">
+            <!-- Bouton précédent -->
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('gestion_agents', page=pagination.prev_num) }}"
+                class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
+                &laquo; Précédent
+            </a>
+            {% else %}
+            <span class="px-4 py-2 bg-gray-100 text-gray-400 rounded cursor-not-allowed">&laquo; Précédent</span>
+            {% endif %}
+
+            <!-- Numéros de pages -->
+            {% for p in range(1, pagination.pages + 1) %}
+            {% if p == pagination.page %}
+            <span class="px-4 py-2 bg-blue-600 text-white rounded font-semibold">{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for('gestion_agents', page=p) }}"
+                class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
+                {{ p }}
+            </a>
+            {% endif %}
+            {% endfor %}
+
+            <!-- Bouton suivant -->
+            {% if pagination.has_next %}
+            <a href="{{ url_for('gestion_agents', page=pagination.next_num) }}"
+                class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
+                Suivant &raquo;
+            </a>
+            {% else %}
+            <span class="px-4 py-2 bg-gray-100 text-gray-400 rounded cursor-not-allowed">Suivant &raquo;</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
         {% else %}
         <div class="text-center py-12">
             <i class="fas fa-users-slash text-gray-300 text-6xl mb-4"></i>
             <p class="text-gray-500 text-lg">Aucun agent enregistré</p>
-            <a href="{{ url_for('ajouter_agent') }}" class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">
+            <a href="{{ url_for('ajouter_agent') }}"
+                class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">
                 <i class="fas fa-user-plus mr-2"></i>Ajouter le premier agent
             </a>
         </div>

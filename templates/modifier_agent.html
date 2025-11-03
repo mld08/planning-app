@@ -44,9 +44,9 @@
             <!-- Email -->
             <div>
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-                    <i class="fas fa-envelope mr-1 text-blue-600"></i>Adresse email <span class="text-red-500">*</span>
+                    <i class="fas fa-envelope mr-1 text-blue-600"></i>Adresse email
                 </label>
-                <input type="email" name="email" id="email" required
+                <input type="email" name="email" id="email"
                        value="{{ agent.email }}"
                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
             </div>
@@ -99,6 +99,103 @@
                 <input type="text" name="chef_de_mission" id="chef_de_mission"
                        value="{{ agent.chef_de_mission or '' }}"
                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+            </div>
+
+            <!-- Genre -->
+            <div>
+                <label for="genre" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-venus-mars mr-1 text-blue-600"></i>Genre
+                </label>
+                <select name="genre" id="genre"
+                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+                    <option value="" {% if agent.genre == "" %}selected{% endif %}>-- Sélectionnez --</option>
+                    <option value="homme" {% if agent.genre == "homme" %}selected{% endif %}>Homme</option>
+                    <option value="femme" {% if agent.genre == "femme" %}selected{% endif %}>Femme</option>
+                </select>
+            </div>
+            
+            <!-- Contraintes spéciales -->
+            <div class="col-span-2 bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">
+                    <i class="fas fa-exclamation-triangle mr-2 text-yellow-600"></i>Contraintes spéciales
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="est_chef_equipe" id="est_chef_equipe"
+                               {% if agent.est_chef_equipe %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="est_chef_equipe" class="ml-2 text-sm text-gray-700">
+                            Chef d'équipe
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" name="est_chef_bureau" id="est_chef_bureau"
+                               {% if agent.est_chef_bureau %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="est_chef_bureau" class="ml-2 text-sm text-gray-700">
+                            Chef de bureau
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" name="est_certification_aeroport" id="est_certification_aeroport"
+                               {% if agent.est_certification_aeroport %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="est_certification_aeroport" class="ml-2 text-sm text-gray-700">
+                            Certification Aéroport
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" name="est_chef_equipe_bvp" id="est_chef_equipe_bvp"
+                               {% if agent.est_chef_equipe_bvp %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="est_chef_equipe_bvp" class="ml-2 text-sm text-gray-700">
+                            Chef d'équipe BVP
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" name="est_chef_equipe_usine" id="est_chef_equipe_usine"
+                               {% if agent.est_chef_equipe_usine %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="est_chef_equipe_usine" class="ml-2 text-sm text-gray-700">
+                            Chef équipe Inspection Usine
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" name="est_observateur_embarque" id="est_observateur_embarque"
+                               {% if agent.est_observateur_embarque %}checked{% endif %}
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               onchange="toggleDateEmbarquement()">
+                        <label for="est_observateur_embarque" class="ml-2 text-sm text-gray-700">
+                            Observateur embarqué
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Dates embarquement -->
+                <div id="dates_embarquement" class="mt-3 grid grid-cols-2 gap-3" 
+                     style="display: {% if agent.est_observateur_embarque %}grid{% else %}none{% endif %};">
+                    <div>
+                        <label for="date_embarquement" class="block text-xs font-medium text-gray-700 mb-1">
+                            Date d'embarquement
+                        </label>
+                        <input type="date" name="date_embarquement" id="date_embarquement"
+                               value="{{ agent.date_embarquement.strftime('%Y-%m-%d') if agent.date_embarquement else '' }}"
+                               class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-1 text-sm border">
+                    </div>
+                    <div>
+                        <label for="date_debarquement_prevue" class="block text-xs font-medium text-gray-700 mb-1">
+                            Date de débarquement prévue
+                        </label>
+                        <input type="date" name="date_debarquement_prevue" id="date_debarquement_prevue"
+                               value="{{ agent.date_debarquement_prevue.strftime('%Y-%m-%d') if agent.date_debarquement_prevue else '' }}"
+                               class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-1 text-sm border">
+                    </div>
+                </div>
             </div>
             
             <!-- Disponibilité -->
@@ -171,4 +268,13 @@
         </form>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleDateEmbarquement() {
+    const checkbox = document.getElementById('est_observateur_embarque');
+    const datesDiv = document.getElementById('dates_embarquement');
+    datesDiv.style.display = checkbox.checked ? 'grid' : 'none';
+}
+</script>
 {% endblock %}

@@ -1,5 +1,5 @@
 import base64
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail
 from flask_migrate import Migrate
@@ -63,7 +63,6 @@ def login():
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        # email = request.form.get('email')
         username = request.form.get('username')
         password = request.form.get('password')
         remember = request.form.get('remember', False)
@@ -91,7 +90,6 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """Page d'inscription (réservée aux admins ou première installation)"""
-    # Vérifier si c'est la première inscription
     premier_utilisateur = User.query.count() == 0
     
     if not premier_utilisateur and (not current_user.is_authenticated or current_user.role != 'admin'):
@@ -103,18 +101,16 @@ def register():
         prenom = request.form.get('prenom')
         email = request.form.get('email')
         password = request.form.get('password')
-        username = request.form.get('username')  # NOUVEAU
-        phone = request.form.get('phone')  # NOUVEAU
-        fonction = request.form.get('fonction')  # NOUVEAU
-        chef_de_mission = request.form.get('chef_de_mission')  # NOUVEAU
+        username = request.form.get('username')
+        phone = request.form.get('phone')
+        fonction = request.form.get('fonction')
+        chef_de_mission = request.form.get('chef_de_mission')
         role = request.form.get('role', 'agent')
         
-        # Vérifier si l'email existe déjà
         if User.query.filter_by(email=email).first():
             flash('Cet email est déjà utilisé.', 'danger')
-        # Vérifier si le username existe déjà (si fourni)
-        elif username and User.query.filter_by(username=username).first():  # NOUVEAU
-            flash('Ce nom d\'utilisateur est déjà utilisé.', 'danger')  # NOUVEAU
+        elif username and User.query.filter_by(username=username).first():
+            flash('Ce nom d\'utilisateur est déjà utilisé.', 'danger')
         else:
             if premier_utilisateur:
                 role = 'admin'
@@ -123,10 +119,10 @@ def register():
                 nom=nom,
                 prenom=prenom,
                 email=email,
-                username=username,  # NOUVEAU
-                phone=phone,  # NOUVEAU
-                fonction=fonction,  # NOUVEAU
-                chef_de_mission=chef_de_mission,  # NOUVEAU
+                username=username,
+                phone=phone,
+                fonction=fonction,
+                chef_de_mission=chef_de_mission,
                 role=role
             )
             user.set_password(password)
@@ -191,7 +187,6 @@ def dashboard_admin():
 @login_required
 def dashboard_agent():
     """Dashboard agent"""
-    # Récupérer le planning de la semaine en cours
     aujourd_hui = date.today()
     planning_actuel = Planning.query.filter(
         Planning.date_debut <= aujourd_hui,
@@ -205,7 +200,6 @@ def dashboard_agent():
             agent_id=current_user.id
         ).order_by(Affectation.jour).all()
     
-    # Statistiques personnelles
     total_jours = current_user.compteur_jour
     total_nuits = current_user.compteur_nuit
     
@@ -213,7 +207,8 @@ def dashboard_agent():
                          planning_actuel=planning_actuel,
                          affectations_semaine=affectations_semaine,
                          total_jours=total_jours,
-                         total_nuits=total_nuits, timedelta=timedelta)
+                         total_nuits=total_nuits, 
+                         timedelta=timedelta)
 
 
 # ==================== GESTION DES AGENTS ====================
@@ -221,13 +216,21 @@ def dashboard_agent():
 @app.route('/admin/agents')
 @login_required
 def gestion_agents():
-    """Liste des agents"""
+    """Liste paginée des agents"""
     if current_user.role != 'admin':
         flash('Accès non autorisé.', 'danger')
         return redirect(url_for('dashboard_agent'))
     
-    agents = User.query.filter_by(role='agent').all()
-    return render_template('gestion_agents.html', agents=agents)
+    # Récupère le numéro de page depuis l’URL (par défaut 1)
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # nombre d'agents par page (modifiable)
+    
+    # Pagination
+    pagination = User.query.filter_by(role='agent').paginate(page=page, per_page=per_page)
+    agents = pagination.items  # agents de la page courante
+    all_agents = User.query.filter_by(role='agent').all()
+    
+    return render_template('gestion_agents.html', agents=agents, pagination=pagination, all_agents=all_agents)
 
 
 @app.route('/admin/agents/ajouter', methods=['GET', 'POST'])
@@ -247,21 +250,50 @@ def ajouter_agent():
         password = request.form.get('password') or 'defaultpassword'
         fonction = request.form.get('fonction')
         chef_de_mission = request.form.get('chef_de_mission') or ''
+        
+        # ========== NOUVEAUX CHAMPS POUR LES CONTRAINTES ==========
+        genre = request.form.get('genre')
+        est_chef_equipe = request.form.get('est_chef_equipe') == 'on'
+        est_chef_bureau = request.form.get('est_chef_bureau') == 'on'
+        est_certification_aeroport = request.form.get('est_certification_aeroport') == 'on'
+        est_chef_equipe_bvp = request.form.get('est_chef_equipe_bvp') == 'on'
+        est_chef_equipe_usine = request.form.get('est_chef_equipe_usine') == 'on'
+        est_observateur_embarque = request.form.get('est_observateur_embarque') == 'on'
+        
+        date_embarquement = None
+        date_debarquement_prevue = None
+        if est_observateur_embarque:
+            date_emb_str = request.form.get('date_embarquement')
+            date_deb_str = request.form.get('date_debarquement_prevue')
+            if date_emb_str:
+                from datetime import datetime as dt
+                date_embarquement = dt.strptime(date_emb_str, '%Y-%m-%d').date()
+            if date_deb_str:
+                date_debarquement_prevue = dt.strptime(date_deb_str, '%Y-%m-%d').date()
+        # ===========================================================
 
-        if User.query.filter_by(email=email).first():
-            flash('Cet email est déjà utilisé.', 'danger')
-        elif username and User.query.filter_by(username=username).first():  # NOUVEAU
-            flash('Ce nom d\'utilisateur est déjà utilisé.', 'danger')  # NOUVEAU
+        if username and User.query.filter_by(username=username).first():
+            flash('Ce nom d\'utilisateur est déjà utilisé.', 'danger')
         else:
             agent = User(
                 nom=nom,
                 prenom=prenom,
                 email=email,
-                username=username,  # NOUVEAU
-                phone=phone,  # NOUVEAU
-                fonction=fonction,  # NOUVEAU
-                chef_de_mission=chef_de_mission,  # NOUVEAU
-                role='agent'
+                username=username,
+                phone=phone,
+                fonction=fonction,
+                chef_de_mission=chef_de_mission,
+                role='agent',
+                # Nouveaux champs contraintes
+                genre=genre,
+                est_chef_equipe=est_chef_equipe,
+                est_chef_bureau=est_chef_bureau,
+                est_certification_aeroport=est_certification_aeroport,
+                est_chef_equipe_bvp=est_chef_equipe_bvp,
+                est_chef_equipe_usine=est_chef_equipe_usine,
+                est_observateur_embarque=est_observateur_embarque,
+                date_embarquement=date_embarquement,
+                date_debarquement_prevue=date_debarquement_prevue
             )
             agent.set_password(password)
             
@@ -293,6 +325,28 @@ def modifier_agent(agent_id):
         agent.fonction = request.form.get('fonction') 
         agent.chef_de_mission = request.form.get('chef_de_mission')
         agent.disponibilite = request.form.get('disponibilite') == 'on'
+        
+        # ========== NOUVEAUX CHAMPS CONTRAINTES ==========
+        agent.genre = request.form.get('genre')
+        agent.est_chef_equipe = request.form.get('est_chef_equipe') == 'on'
+        agent.est_chef_bureau = request.form.get('est_chef_bureau') == 'on'
+        agent.est_certification_aeroport = request.form.get('est_certification_aeroport') == 'on'
+        agent.est_chef_equipe_bvp = request.form.get('est_chef_equipe_bvp') == 'on'
+        agent.est_chef_equipe_usine = request.form.get('est_chef_equipe_usine') == 'on'
+        agent.est_observateur_embarque = request.form.get('est_observateur_embarque') == 'on'
+        
+        if agent.est_observateur_embarque:
+            date_emb_str = request.form.get('date_embarquement')
+            date_deb_str = request.form.get('date_debarquement_prevue')
+            if date_emb_str:
+                from datetime import datetime as dt
+                agent.date_embarquement = dt.strptime(date_emb_str, '%Y-%m-%d').date()
+            if date_deb_str:
+                agent.date_debarquement_prevue = dt.strptime(date_deb_str, '%Y-%m-%d').date()
+        else:
+            agent.date_embarquement = None
+            agent.date_debarquement_prevue = None
+        # =================================================
         
         password = request.form.get('password')
         if password:
@@ -343,7 +397,6 @@ def voir_planning(planning_id):
     """Voir un planning détaillé"""
     planning = Planning.query.get_or_404(planning_id)
     
-    # Organiser les affectations par jour
     affectations_par_jour = {}
     jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
     
@@ -374,7 +427,7 @@ def generer_planning():
     
     try:
         planning = scheduler_manager.generer_planning_semaine()
-        flash(f'Planning généré pour la semaine du {planning.date_debut.strftime("%d/%m/%Y")}!', 'success')
+        flash(f'Planning genere pour la semaine du {planning.date_debut.strftime("%d/%m/%Y")}!', 'success')
         return redirect(url_for('voir_planning', planning_id=planning.id))
     except Exception as e:
         flash(f'Erreur lors de la génération du planning: {str(e)}', 'danger')
@@ -401,20 +454,17 @@ def archiver_planning(planning_id):
 @app.route('/admin/plannings/<int:planning_id>/export/pdf')
 @login_required
 def export_planning_pdf(planning_id):
-    """Exporter un planning en PDF avec en-tête institutionnel (image après la devise)"""
+    """Exporter un planning en PDF avec en-tête institutionnel"""
     planning = Planning.query.get_or_404(planning_id)
     
-    # === Configuration du document ===
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
     elements = []
     
-    # === Styles ===
     styles = getSampleStyleSheet()
     style_center = ParagraphStyle(name='center', alignment=TA_CENTER, fontSize=10, leading=12)
     style_title = styles['Title']
 
-    # === Chargement des images ===
     logo_img = None
     sig_img = None
     try:
@@ -435,8 +485,6 @@ def export_planning_pdf(planning_id):
     except Exception:
         sig_img = None
 
-    # === Construire la colonne gauche ===
-    # Le texte avant et après l’image sont séparés pour insérer l’image au bon endroit
     haut_text = (
         "<strong>République du Sénégal</strong><br/>"
         "<em>Un Peuple – Un But – Une Foi</em><br/>"
@@ -445,12 +493,11 @@ def export_planning_pdf(planning_id):
 
     bas_text = (
         "★★★★★<br/>"
-        "MINISTÈRE DES PÊCHES ET<br/>DE L’ÉCONOMIE MARITIME<br/>"
+        "MINISTÈRE DES PÊCHES ET<br/>DE L'ÉCONOMIE MARITIME<br/>"
         "★★★★★<br/>Direction de la Protection et de la<br/>Surveillance des Pêches (DPSP)"
     )
     bas_para = Paragraph(bas_text, style_center)
 
-    # Table imbriquée pour : texte haut → image → texte bas
     if sig_img:
         gauche_col = Table(
             [[haut_para], [sig_img], [bas_para]],
@@ -464,15 +511,10 @@ def export_planning_pdf(planning_id):
             ('BOX', (0,0), (-1,-1), 0, colors.white)
         ]))
     else:
-        gauche_col = Paragraph(
-            haut_text + "★★★★★<br/>" + bas_text,
-            style_center
-        )
+        gauche_col = Paragraph(haut_text + "★★★★★<br/>" + bas_text, style_center)
 
-    # Centre vide
     centre_vide = Paragraph("", style_center)
 
-    # Colonne droite (logo)
     if logo_img:
         droite_col = Table([[logo_img]], colWidths=[doc.width/3 - 10])
         droite_col.setStyle(TableStyle([
@@ -483,7 +525,6 @@ def export_planning_pdf(planning_id):
     else:
         droite_col = Paragraph("", style_center)
 
-    # Table principale de l'en-tête
     entete_table = Table(
         [[gauche_col, centre_vide, droite_col]],
         colWidths=[doc.width/3, doc.width/3, doc.width/3]
@@ -497,13 +538,6 @@ def export_planning_pdf(planning_id):
     elements.append(entete_table)
     elements.append(Spacer(1, 10))
 
-    # Ligne de séparation sous l'en-tête
-    # hr = Table([['']], colWidths=[doc.width])
-    # hr.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 1, colors.black)]))
-    # elements.append(hr)
-    # elements.append(Spacer(1, 10))
-
-    # === Titre du planning ===
     titre = Paragraph(
         f"<b>Planning Semaine {planning.semaine}/{planning.annee}</b><br/>{planning.periode}",
         style_title
@@ -511,7 +545,6 @@ def export_planning_pdf(planning_id):
     elements.append(titre)
     elements.append(Spacer(1, 12))
 
-    # === Tableau principal ===
     jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
     data = [['Agent'] + jours_semaine]
     
@@ -554,12 +587,22 @@ def export_planning_pdf(planning_id):
     doc.build(elements)
     
     buffer.seek(0)
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name=f'planning_semaine_{planning.semaine}_{planning.annee}.pdf',
-        mimetype='application/pdf'
-    )
+    pdf_data = buffer.getvalue()
+    response = make_response(pdf_data)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=planning_semaine_{planning.semaine}_{planning.annee}.pdf'
+    return response
+    
+    # buffer.seek(0)
+    # pdf_bytes = buffer.getvalue()
+    
+
+    # return send_file(
+    #     BytesIO(pdf_bytes),
+    #     as_attachment=True,
+    #     download_name=f'planning_semaine_{planning.semaine}_{planning.annee}.pdf',
+    #     mimetype='application/pdf'
+    # )
 
 
 @app.route('/admin/plannings/<int:planning_id>/export/excel')
@@ -568,22 +611,18 @@ def export_planning_excel(planning_id):
     """Exporter un planning en Excel"""
     planning = Planning.query.get_or_404(planning_id)
     
-    # Créer le workbook
     wb = Workbook()
     ws = wb.active
     ws.title = f"Semaine {planning.semaine}"
     
-    # En-têtes
     jours_semaine = ['Agent', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
     ws.append(jours_semaine)
     
-    # Style pour l'en-tête
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
         cell.alignment = Alignment(horizontal='center')
     
-    # Données
     agents = db.session.query(User).join(Affectation).filter(
         Affectation.planning_id == planning.id
     ).distinct().all()
@@ -607,31 +646,29 @@ def export_planning_excel(planning_id):
         
         ws.append(row)
     
-    # Ajuster la largeur des colonnes
     for column in ws.columns:
         max_length = 0
         column = [cell for cell in column]
         for cell in column:
             try:
                 if len(str(cell.value)) > max_length:
-                    max_length = len(cell.value)
+                    max_length = len(str(cell.value))
             except:
                 pass
         adjusted_width = (max_length + 2)
         ws.column_dimensions[column[0].column_letter].width = adjusted_width
     
-    # Sauvegarder dans un buffer
+    # Sauvegarder dans BytesIO
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
     
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name=f'planning_semaine_{planning.semaine}_{planning.annee}.xlsx',
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-
+    # Utiliser make_response pour éviter fileno
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename=planning_semaine_{planning.semaine}_{planning.annee}.xlsx'
+    
+    return response
 
 # ==================== TÂCHES PLANIFIÉES ====================
 
@@ -711,7 +748,6 @@ def create_sample_agents():
 
 
 if __name__ == '__main__':
-    # Configurer le scheduler pour générer le planning chaque dimanche à 23h59
     scheduler.add_job(
         func=job_generation_automatique,
         trigger='cron',
@@ -725,5 +761,4 @@ if __name__ == '__main__':
     
     print("Scheduler démarré - Génération automatique chaque dimanche à 20h00")
     
-    # Lancer l'application
     app.run(debug=True, use_reloader=False)

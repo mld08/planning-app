@@ -20,6 +20,16 @@ class User(UserMixin, db.Model):
     chef_de_mission = db.Column(db.String(100), nullable=True)
     role = db.Column(db.String(20), nullable=False, default='agent')  # 'admin' ou 'agent'
     disponibilite = db.Column(db.Boolean, default=True)
+    # ========== NOUVEAUX CHAMPS POUR LES CONTRAINTES ==========
+    genre = db.Column(db.String(10), nullable=True)  # 'homme', 'femme'
+    est_chef_equipe = db.Column(db.Boolean, default=False)
+    est_chef_bureau = db.Column(db.Boolean, default=False)
+    est_certification_aeroport = db.Column(db.Boolean, default=False)
+    est_chef_equipe_bvp = db.Column(db.Boolean, default=False)
+    est_chef_equipe_usine = db.Column(db.Boolean, default=False)
+    est_observateur_embarque = db.Column(db.Boolean, default=False)
+    date_embarquement = db.Column(db.Date, nullable=True)
+    date_debarquement_prevue = db.Column(db.Date, nullable=True)
     compteur_jour = db.Column(db.Integer, default=0)
     compteur_nuit = db.Column(db.Integer, default=0)
     dernier_shift = db.Column(db.String(10), nullable=True)  # 'jour', 'nuit', ou None
