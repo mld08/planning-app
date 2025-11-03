@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier l'Agent{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <a href="{{ url_for('gestion_agents') }}" class="text-blue-600 hover:text-blue-800 font-medium">
+            <i class="fas fa-arrow-left mr-2"></i>Retour à la liste des agents
+        </a>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-lg p-8">
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">
+                <i class="fas fa-user-edit text-blue-600 mr-2"></i>Modifier l'agent
+            </h1>
+            <p class="text-gray-600 mt-2">{{ agent.prenom }} {{ agent.nom }}</p>
+        </div>
+        
+        <form method="POST" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Prénom -->
+                <div>
+                    <label for="prenom" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-1 text-blue-600"></i>Prénom <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="prenom" id="prenom" required
+                           value="{{ agent.prenom }}"
+                           class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+                </div>
+                
+                <!-- Nom -->
+                <div>
+                    <label for="nom" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-1 text-blue-600"></i>Nom <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="nom" id="nom" required
+                           value="{{ agent.nom }}"
+                           class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+                </div>
+            </div>
+            
+            <!-- Email -->
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-envelope mr-1 text-blue-600"></i>Adresse email <span class="text-red-500">*</span>
+                </label>
+                <input type="email" name="email" id="email" required
+                       value="{{ agent.email }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+            </div>
+
+            <!-- Username -->
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-user mr-1 text-blue-600"></i>Nom d'utilisateur
+                </label>
+                <input type="text" name="username" id="username"
+                       value="{{ agent.username or '' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+                <p class="mt-1 text-sm text-gray-500">Optionnel - pour connexion alternative</p>
+            </div>
+            
+            <!-- Téléphone -->
+            <div>
+                <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-phone mr-1 text-blue-600"></i>Téléphone
+                </label>
+                <input type="tel" name="phone" id="phone"
+                       value="{{ agent.phone or '' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+            </div>
+            
+            <!-- Fonction -->
+            <div>
+                <label for="fonction" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-briefcase mr-1 text-blue-600"></i>Fonction
+                </label>
+                <input type="text" name="fonction" id="fonction"
+                       value="{{ agent.fonction or '' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+            </div>
+            
+            <!-- Chef de mission -->
+            <div>
+                <label for="chef_de_mission" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-user-tie mr-1 text-blue-600"></i>Chef de mission
+                </label>
+                <input type="text" name="chef_de_mission" id="chef_de_mission"
+                       value="{{ agent.chef_de_mission or '' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+            </div>
+            
+            <!-- Disponibilité -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-toggle-on mr-1 text-blue-600"></i>Disponibilité
+                </label>
+                <div class="flex items-center">
+                    <input type="checkbox" name="disponibilite" id="disponibilite" 
+                           {% if agent.disponibilite %}checked{% endif %}
+                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="disponibilite" class="ml-2 block text-sm text-gray-900">
+                        Cet agent est disponible pour être affecté aux plannings
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Mot de passe -->
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-lock mr-1 text-blue-600"></i>Nouveau mot de passe
+                </label>
+                <input type="password" name="password" id="password" minlength="6"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition"
+                       placeholder="Laisser vide pour ne pas changer">
+                <p class="mt-1 text-sm text-gray-500">Laissez ce champ vide si vous ne souhaitez pas changer le mot de passe</p>
+            </div>
+            
+            <!-- Statistiques (lecture seule) -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">
+                    <i class="fas fa-chart-bar mr-2"></i>Statistiques
+                </h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-white rounded p-3 border border-gray-200">
+                        <p class="text-xs text-gray-600">Shifts de jour</p>
+                        <p class="text-xl font-bold text-yellow-600">{{ agent.compteur_jour }}</p>
+                    </div>
+                    <div class="bg-white rounded p-3 border border-gray-200">
+                        <p class="text-xs text-gray-600">Shifts de nuit</p>
+                        <p class="text-xl font-bold text-indigo-600">{{ agent.compteur_nuit }}</p>
+                    </div>
+                    <div class="bg-white rounded p-3 border border-gray-200">
+                        <p class="text-xs text-gray-600">Total</p>
+                        <p class="text-xl font-bold text-blue-600">{{ agent.compteur_jour + agent.compteur_nuit }}</p>
+                    </div>
+                </div>
+                {% if agent.dernier_shift %}
+                <p class="text-xs text-gray-600 mt-3">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Dernier shift: <strong>{{ agent.dernier_shift.capitalize() }}</strong>
+                    {% if agent.derniere_affectation %}
+                    le {{ agent.derniere_affectation.strftime('%d/%m/%Y') }}
+                    {% endif %}
+                </p>
+                {% endif %}
+            </div>
+            
+            <!-- Boutons -->
+            <div class="flex items-center justify-end space-x-4 pt-4 border-t">
+                <a href="{{ url_for('gestion_agents') }}" 
+                   class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg transition">
+                    <i class="fas fa-times mr-2"></i>Annuler
+                </a>
+                <button type="submit" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">
+                    <i class="fas fa-save mr-2"></i>Enregistrer les modifications
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

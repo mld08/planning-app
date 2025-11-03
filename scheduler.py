@@ -1,0 +1,351 @@
+from datetime import datetime, timedelta, date
+from models import db, User, Planning, Affectation, HistoriqueModification
+from flask_mail import Message
+from flask import current_app
+import random
+
+
+class PlanningScheduler:
+    """Gestionnaire de planification automatique des équipes"""
+    
+    def __init__(self, app=None, mail=None):
+        self.app = app
+        self.mail = mail
+    
+    def generer_planning_semaine(self, date_debut=None):
+        """
+        Génère automatiquement le planning pour une semaine
+        
+        Args:
+            date_debut: Date de début de la semaine (lundi). Si None, prend la semaine suivante.
+        
+        Returns:
+            Planning: Le planning créé
+        """
+        with self.app.app_context():
+            # Déterminer la date de début (lundi prochain si non spécifié)
+            if date_debut is None:
+                aujourd_hui = date.today()
+                jours_jusqua_lundi = (7 - aujourd_hui.weekday()) % 7
+                if jours_jusqua_lundi == 0:
+                    jours_jusqua_lundi = 7
+                date_debut = aujourd_hui + timedelta(days=jours_jusqua_lundi)
+            
+            date_fin = date_debut + timedelta(days=6)  # Dimanche
+            
+            # Vérifier si un planning existe déjà pour cette semaine
+            planning_existant = Planning.query.filter(
+                Planning.date_debut == date_debut
+            ).first()
+            
+            if planning_existant:
+                print(f"Un planning existe déjà pour la semaine du {date_debut}")
+                return planning_existant
+            
+            # Créer le nouveau planning
+            semaine = date_debut.isocalendar()[1]
+            annee = date_debut.year
+            
+            planning = Planning(
+                semaine=semaine,
+                annee=annee,
+                date_debut=date_debut,
+                date_fin=date_fin,
+                statut='actif'
+            )
+            
+            db.session.add(planning)
+            db.session.flush()  # Pour obtenir l'ID du planning
+            
+            # Générer les affectations pour chaque jour
+            for i in range(7):
+                jour = date_debut + timedelta(days=i)
+                self._generer_affectations_jour(planning, jour)
+            
+            db.session.commit()
+            
+            # Envoyer les notifications par email
+            self._envoyer_notifications(planning)
+            
+            print(f"Planning généré avec succès pour la semaine du {date_debut}")
+            return planning
+    
+    def _generer_affectations_jour(self, planning, jour):
+        """
+        Génère les affectations pour un jour donné
+        
+        Args:
+            planning: L'objet Planning
+            jour: La date du jour
+        """
+        # Récupérer tous les agents disponibles
+        agents_disponibles = User.query.filter_by(
+            role='agent',
+            disponibilite=True
+        ).all()
+        
+        if len(agents_disponibles) < 6:
+            raise Exception(f"Pas assez d'agents disponibles ({len(agents_disponibles)}/6 requis)")
+        
+        # Trier les agents selon les règles de rotation
+        agents_tries = self._trier_agents_rotation(agents_disponibles, jour)
+        
+        # Affectation pour la Veille CRSS (1 jour + 1 nuit)
+        agent_crss_jour = self._selectionner_agent_shift(agents_tries, 'jour', jour)
+        if agent_crss_jour:
+            self._creer_affectation(planning, agent_crss_jour, jour, 'jour', 'CRSS', 'agent')
+            agents_tries.remove(agent_crss_jour)
+        
+        agent_crss_nuit = self._selectionner_agent_shift(agents_tries, 'nuit', jour)
+        if agent_crss_nuit:
+            self._creer_affectation(planning, agent_crss_nuit, jour, 'nuit', 'CRSS', 'agent')
+            agents_tries.remove(agent_crss_nuit)
+        
+        # Affectation pour la Brigade Portuaire (1 chef + 1 inspecteur + 3 agents)
+        # Chef d'équipe (jour)
+        chef = self._selectionner_agent_shift(agents_tries, 'jour', jour)
+        if chef:
+            self._creer_affectation(planning, chef, jour, 'jour', 'BVP', 'chef')
+            agents_tries.remove(chef)
+        
+        # Inspecteur (jour)
+        inspecteur = self._selectionner_agent_shift(agents_tries, 'jour', jour)
+        if inspecteur:
+            self._creer_affectation(planning, inspecteur, jour, 'jour', 'BVP', 'inspecteur')
+            agents_tries.remove(inspecteur)
+        
+        # 3 agents (2 jour + 1 nuit pour rotation)
+        for i in range(2):
+            if agents_tries:
+                agent = self._selectionner_agent_shift(agents_tries, 'jour', jour)
+                if agent:
+                    self._creer_affectation(planning, agent, jour, 'jour', 'BVP', 'agent')
+                    agents_tries.remove(agent)
+        
+        # 1 agent de nuit pour BVP
+        if agents_tries:
+            agent_nuit = self._selectionner_agent_shift(agents_tries, 'nuit', jour)
+            if agent_nuit:
+                self._creer_affectation(planning, agent_nuit, jour, 'nuit', 'BVP', 'agent')
+    
+    def _trier_agents_rotation(self, agents, jour):
+        """
+        Trie les agents selon les règles de rotation équitable
+        
+        Args:
+            agents: Liste des agents disponibles
+            jour: Date du jour
+        
+        Returns:
+            Liste triée d'agents
+        """
+        # Calculer un score pour chaque agent
+        agents_scores = []
+        
+        for agent in agents:
+            score = 0
+            
+            # Privilégier ceux qui ont le moins travaillé
+            score += (agent.compteur_jour + agent.compteur_nuit) * 100
+            
+            # Pénaliser si a travaillé récemment
+            if agent.derniere_affectation:
+                jours_depuis = (jour - agent.derniere_affectation).days
+                if jours_depuis < 2:
+                    score += 1000  # Forte pénalité
+                elif jours_depuis < 4:
+                    score += 500
+            
+            agents_scores.append((agent, score))
+        
+        # Trier par score croissant (ceux avec le score le plus bas en premier)
+        agents_scores.sort(key=lambda x: x[1])
+        
+        return [agent for agent, score in agents_scores]
+    
+    def _selectionner_agent_shift(self, agents, shift, jour):
+        """
+        Sélectionne un agent pour un shift donné en respectant les contraintes
+        
+        Args:
+            agents: Liste des agents disponibles
+            shift: 'jour' ou 'nuit'
+            jour: Date du jour
+        
+        Returns:
+            User: L'agent sélectionné ou None
+        """
+        for agent in agents:
+            # Règle : pas deux nuits consécutives
+            if shift == 'nuit':
+                # Vérifier si l'agent a fait la nuit la veille
+                hier = jour - timedelta(days=1)
+                affectation_hier = Affectation.query.filter_by(
+                    agent_id=agent.id,
+                    jour=hier,
+                    shift='nuit'
+                ).first()
+                
+                if affectation_hier:
+                    continue  # Skip cet agent
+                
+                # Vérifier si déjà affecté de nuit aujourd'hui
+                affectation_aujourdhui = Affectation.query.filter_by(
+                    agent_id=agent.id,
+                    jour=jour,
+                    shift='nuit'
+                ).first()
+                
+                if affectation_aujourdhui:
+                    continue
+            
+            # Vérifier si déjà affecté aujourd'hui
+            affectation_aujourdhui = Affectation.query.filter_by(
+                agent_id=agent.id,
+                jour=jour
+            ).first()
+            
+            if affectation_aujourdhui:
+                continue
+            
+            return agent
+        
+        return None
+    
+    def _creer_affectation(self, planning, agent, jour, shift, equipe, poste):
+        """
+        Crée une affectation et met à jour les compteurs de l'agent
+        
+        Args:
+            planning: L'objet Planning
+            agent: L'agent à affecter
+            jour: Date du jour
+            shift: 'jour' ou 'nuit'
+            equipe: 'CRSS' ou 'BVP'
+            poste: 'chef', 'inspecteur', 'agent'
+        """
+        affectation = Affectation(
+            planning_id=planning.id,
+            agent_id=agent.id,
+            jour=jour,
+            shift=shift,
+            equipe=equipe,
+            poste=poste
+        )
+        
+        db.session.add(affectation)
+        
+        # Mettre à jour les compteurs de l'agent
+        if shift == 'jour':
+            agent.compteur_jour += 1
+        else:
+            agent.compteur_nuit += 1
+        
+        agent.dernier_shift = shift
+        agent.derniere_affectation = jour
+        
+        db.session.add(agent)
+    
+    def _envoyer_notifications(self, planning):
+        """
+        Envoie les notifications par email à tous les agents affectés
+        
+        Args:
+            planning: L'objet Planning
+        """
+        if not self.mail:
+            print("Service email non configuré, notifications non envoyées")
+            return
+        
+        # Récupérer tous les agents affectés pour ce planning
+        agents_affectations = db.session.query(User).join(Affectation).filter(
+            Affectation.planning_id == planning.id
+        ).distinct().all()
+        
+        for agent in agents_affectations:
+            # Récupérer toutes les affectations de cet agent pour cette semaine
+            affectations = Affectation.query.filter_by(
+                planning_id=planning.id,
+                agent_id=agent.id
+            ).order_by(Affectation.jour).all()
+            
+            # Construire le contenu de l'email
+            self._envoyer_email_agent(agent, planning, affectations)
+    
+    def _envoyer_email_agent(self, agent, planning, affectations):
+        """
+        Envoie un email à un agent avec son planning
+        
+        Args:
+            agent: L'agent
+            planning: Le planning
+            affectations: Liste des affectations de l'agent
+        """
+        jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+        
+        # Créer un dictionnaire des affectations par jour
+        affectations_par_jour = {}
+        for aff in affectations:
+            affectations_par_jour[aff.jour] = aff
+        
+        # Construire le corps de l'email
+        corps = f"""
+        Bonjour {agent.prenom},
+
+        Voici votre planning pour la semaine du {planning.date_debut.strftime('%d/%m/%Y')} au {planning.date_fin.strftime('%d/%m/%Y')} :
+
+        """
+        
+        # Ajouter chaque jour
+        for i in range(7):
+            jour = planning.date_debut + timedelta(days=i)
+            nom_jour = jours_semaine[i]
+            
+            if jour in affectations_par_jour:
+                aff = affectations_par_jour[jour]
+                horaire = aff.horaire
+                equipe = aff.equipe
+                poste = aff.poste.capitalize() if aff.poste else 'Agent'
+                corps += f"- {nom_jour} {jour.strftime('%d/%m')} : {aff.shift.capitalize()} ({horaire}) - {equipe} ({poste})\n"
+            else:
+                corps += f"- {nom_jour} {jour.strftime('%d/%m')} : Repos\n"
+        
+        corps += """
+        Merci et bon service !
+
+        ---
+        Service de planification automatique
+        """
+        
+        try:
+            msg = Message(
+                subject=f"Votre planning - Semaine {planning.semaine}/{planning.annee}",
+                recipients=[agent.email],
+                body=corps
+            )
+            self.mail.send(msg)
+            print(f"Email envoyé à {agent.email}")
+        except Exception as e:
+            print(f"Erreur lors de l'envoi de l'email à {agent.email}: {str(e)}")
+    
+    def archiver_anciens_plannings(self, jours=30):
+        """
+        Archive les plannings de plus de X jours
+        
+        Args:
+            jours: Nombre de jours après lesquels archiver
+        """
+        with self.app.app_context():
+            date_limite = date.today() - timedelta(days=jours)
+            
+            plannings = Planning.query.filter(
+                Planning.date_fin < date_limite,
+                Planning.statut == 'actif'
+            ).all()
+            
+            for planning in plannings:
+                planning.statut = 'archive'
+                db.session.add(planning)
+            
+            db.session.commit()
+            print(f"{len(plannings)} plannings archivés")

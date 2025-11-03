@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Planning Automatique{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .alert {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    {% if current_user.is_authenticated %}
+    <!-- Navigation -->
+    <nav class="bg-blue-600 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="{{ url_for('index') }}" class="flex items-center">
+                        <i class="fas fa-calendar-alt text-white text-2xl mr-3"></i>
+                        <span class="text-white text-xl font-bold">Planning Auto</span>
+                    </a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    {% if current_user.role == 'admin' %}
+                    <a href="{{ url_for('dashboard_admin') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium transition">
+                        <i class="fas fa-home mr-1"></i> Dashboard
+                    </a>
+                    <a href="{{ url_for('gestion_agents') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium transition">
+                        <i class="fas fa-users mr-1"></i> Agents
+                    </a>
+                    <a href="{{ url_for('liste_plannings') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium transition">
+                        <i class="fas fa-calendar-week mr-1"></i> Plannings
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('dashboard_agent') }}" class="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium transition">
+                        <i class="fas fa-home mr-1"></i> Mon Planning
+                    </a>
+                    {% endif %}
+                    
+                    <div class="flex items-center text-white">
+                        <i class="fas fa-user-circle mr-2"></i>
+                        <span class="text-sm">{{ current_user.prenom }} {{ current_user.nom }}</span>
+                    </div>
+                    
+                    <a href="{{ url_for('logout') }}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Déconnexion
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    
+    <!-- Messages Flash -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert mb-4 p-4 rounded-lg shadow-md {% if category == 'success' %}bg-green-100 border-l-4 border-green-500 text-green-700{% elif category == 'danger' %}bg-red-100 border-l-4 border-red-500 text-red-700{% elif category == 'warning' %}bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700{% else %}bg-blue-100 border-l-4 border-blue-500 text-blue-700{% endif %}">
+                    <div class="flex items-center">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} mr-3"></i>
+                        <p>{{ message }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    
+    <!-- Contenu principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="text-center">
+                <p class="text-sm">© 2025 Système de Planification Automatique - Tous droits réservés</p>
+                <p class="text-xs mt-2 text-gray-400">Développé avec Flask & Tailwind CSS</p>
+            </div>
+        </div>
+    </footer>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

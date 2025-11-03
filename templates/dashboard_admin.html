@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- En-tête -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-xl p-8 text-white">
+        <h1 class="text-3xl font-bold mb-2">
+            <i class="fas fa-chart-line mr-3"></i>Tableau de bord administrateur
+        </h1>
+        <p class="text-blue-100">Bienvenue {{ current_user.prenom }}, gérez vos plannings et équipes</p>
+    </div>
+    
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Carte Agents -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-blue-500 transform transition hover:scale-105">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Agents totaux</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">{{ nb_agents }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-4">
+                    <i class="fas fa-users text-blue-600 text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('gestion_agents') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    Gérer les agents <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Carte Disponibilité -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-green-500 transform transition hover:scale-105">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Agents disponibles</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">{{ nb_agents_disponibles }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-4">
+                    <i class="fas fa-check-circle text-green-600 text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-sm text-gray-600">
+                    {{ ((nb_agents_disponibles / nb_agents * 100) if nb_agents > 0 else 0)|round(1) }}% de disponibilité
+                </span>
+            </div>
+        </div>
+        
+        <!-- Carte Planning actuel -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500 transform transition hover:scale-105">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Planning actuel</p>
+                    {% if planning_actuel %}
+                    <p class="text-xl font-bold text-gray-800 mt-2">Semaine {{ planning_actuel.semaine }}</p>
+                    {% else %}
+                    <p class="text-xl font-bold text-gray-800 mt-2">Aucun</p>
+                    {% endif %}
+                </div>
+                <div class="bg-purple-100 rounded-full p-4">
+                    <i class="fas fa-calendar-week text-purple-600 text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                {% if planning_actuel %}
+                <a href="{{ url_for('voir_planning', planning_id=planning_actuel.id) }}" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
+                    Voir le planning <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+                {% else %}
+                <span class="text-sm text-gray-600">Aucun planning en cours</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions rapides -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">
+            <i class="fas fa-bolt text-yellow-500 mr-2"></i>Actions rapides
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <form method="POST" action="{{ url_for('generer_planning') }}" class="inline">
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105">
+                    <i class="fas fa-magic mr-2"></i>Générer un nouveau planning
+                </button>
+            </form>
+            
+            <a href="{{ url_for('ajouter_agent') }}" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md text-center transition transform hover:scale-105">
+                <i class="fas fa-user-plus mr-2"></i>Ajouter un agent
+            </a>
+            
+            <a href="{{ url_for('liste_plannings') }}" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md text-center transition transform hover:scale-105">
+                <i class="fas fa-history mr-2"></i>Historique des plannings
+            </a>
+        </div>
+    </div>
+    
+    <!-- Planning actuel détaillé -->
+    {% if planning_actuel %}
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">
+                <i class="fas fa-calendar-check text-blue-600 mr-2"></i>Planning de la semaine en cours
+            </h2>
+            <a href="{{ url_for('voir_planning', planning_id=planning_actuel.id) }}" class="text-blue-600 hover:text-blue-800 font-medium">
+                Voir détails <i class="fas fa-external-link-alt ml-1"></i>
+            </a>
+        </div>
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+            <p class="text-gray-700">
+                <span class="font-semibold">Période:</span> {{ planning_actuel.periode }}
+            </p>
+            <p class="text-gray-700 mt-1">
+                <span class="font-semibold">Créé le:</span> {{ planning_actuel.cree_le.strftime('%d/%m/%Y à %H:%M') }}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Plannings récents -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">
+            <i class="fas fa-clock text-gray-600 mr-2"></i>Plannings récents
+        </h2>
+        {% if plannings_recents %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Semaine
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Période
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Statut
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for planning in plannings_recents %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-medium text-gray-900">Semaine {{ planning.semaine }}/{{ planning.annee }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-600">{{ planning.periode }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if planning.statut == 'actif' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i> Actif
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                <i class="fas fa-archive mr-1"></i> Archivé
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <a href="{{ url_for('voir_planning', planning_id=planning.id) }}" class="text-blue-600 hover:text-blue-900 mr-3">
+                                <i class="fas fa-eye"></i> Voir
+                            </a>
+                            <a href="{{ url_for('export_planning_pdf', planning_id=planning.id) }}" class="text-red-600 hover:text-red-900 mr-3">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </a>
+                            <a href="{{ url_for('export_planning_excel', planning_id=planning.id) }}" class="text-green-600 hover:text-green-900">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-500 text-center py-4">Aucun planning disponible</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

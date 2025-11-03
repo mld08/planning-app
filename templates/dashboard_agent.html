@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Mon Planning{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- En-tête -->
+    <div class="bg-gradient-to-r from-purple-600 to-purple-800 rounded-lg shadow-xl p-8 text-white">
+        <h1 class="text-3xl font-bold mb-2">
+            <i class="fas fa-calendar-alt mr-3"></i>Mon Planning
+        </h1>
+        <p class="text-purple-100">Bienvenue {{ current_user.prenom }}, voici vos horaires de la semaine</p>
+    </div>
+    
+    <!-- Statistiques personnelles -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Total jours -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-yellow-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Shifts de jour</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">{{ total_jours }}</p>
+                </div>
+                <div class="bg-yellow-100 rounded-full p-4">
+                    <i class="fas fa-sun text-yellow-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total nuits -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-indigo-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Shifts de nuit</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">{{ total_nuits }}</p>
+                </div>
+                <div class="bg-indigo-100 rounded-full p-4">
+                    <i class="fas fa-moon text-indigo-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total général -->
+        <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Total shifts</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">{{ total_jours + total_nuits }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-4">
+                    <i class="fas fa-clipboard-list text-green-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Planning de la semaine -->
+    {% if planning_actuel %}
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">
+                <i class="fas fa-calendar-week text-purple-600 mr-2"></i>Planning de la semaine
+            </h2>
+            <span class="bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-semibold">
+                Semaine {{ planning_actuel.semaine }}/{{ planning_actuel.annee }}
+            </span>
+        </div>
+        
+        <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded mb-6">
+            <p class="text-gray-700 font-medium">
+                <i class="fas fa-info-circle mr-2"></i>
+                Période: {{ planning_actuel.periode }}
+            </p>
+        </div>
+        
+        {% if affectations_semaine %}
+        <!-- Planning en grille -->
+        <div class="grid grid-cols-1 lg:grid-cols-7 gap-4">
+            {% set jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] %}
+            {% set affectations_dict = {} %}
+            {% for aff in affectations_semaine %}
+                {% set _ = affectations_dict.update({aff.jour.isoformat(): aff}) %}
+            {% endfor %}
+            
+            {% for i in range(7) %}
+                {% set jour = planning_actuel.date_debut + timedelta(days=i) %}
+                {% set nom_jour = jours_semaine[i] %}
+                {% set affectation = affectations_dict.get(jour.isoformat()) %}
+                
+                <div class="border-2 rounded-lg p-4 transition transform hover:scale-105 {% if affectation %}{% if affectation.shift == 'jour' %}border-yellow-400 bg-yellow-50{% else %}border-indigo-400 bg-indigo-50{% endif %}{% else %}border-gray-200 bg-gray-50{% endif %}">
+                    <div class="text-center">
+                        <p class="font-bold text-gray-800 mb-1">{{ nom_jour }}</p>
+                        <p class="text-sm text-gray-600 mb-3">{{ jour.strftime('%d/%m') }}</p>
+                        
+                        {% if affectation %}
+                        <div class="space-y-2">
+                            <div class="{% if affectation.shift == 'jour' %}bg-yellow-200 text-yellow-900{% else %}bg-indigo-200 text-indigo-900{% endif %} rounded-full px-3 py-1 text-sm font-semibold">
+                                <i class="fas {% if affectation.shift == 'jour' %}fa-sun{% else %}fa-moon{% endif %} mr-1"></i>
+                                {{ affectation.shift.upper() }}
+                            </div>
+                            <p class="text-xs font-medium text-gray-700">{{ affectation.horaire }}</p>
+                            <p class="text-xs bg-white rounded px-2 py-1 font-semibold text-gray-800">{{ affectation.equipe }}</p>
+                            {% if affectation.poste %}
+                            <p class="text-xs text-gray-600 italic">{{ affectation.poste.capitalize() }}</p>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="text-gray-400">
+                            <i class="fas fa-bed text-2xl mb-2"></i>
+                            <p class="text-sm font-medium">Repos</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Résumé de la semaine -->
+        <div class="mt-8 bg-gray-50 rounded-lg p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="fas fa-chart-bar mr-2"></i>Résumé de la semaine
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% set nb_jours = affectations_semaine|selectattr('shift', 'equalto', 'jour')|list|length %}
+                {% set nb_nuits = affectations_semaine|selectattr('shift', 'equalto', 'nuit')|list|length %}
+                {% set nb_repos = 7 - affectations_semaine|length %}
+                
+                <div class="bg-white rounded-lg p-4 border-l-4 border-yellow-500">
+                    <p class="text-sm text-gray-600">Jours travaillés</p>
+                    <p class="text-2xl font-bold text-gray-800">{{ nb_jours }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-4 border-l-4 border-indigo-500">
+                    <p class="text-sm text-gray-600">Nuits travaillées</p>
+                    <p class="text-2xl font-bold text-gray-800">{{ nb_nuits }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-4 border-l-4 border-gray-400">
+                    <p class="text-sm text-gray-600">Jours de repos</p>
+                    <p class="text-2xl font-bold text-gray-800">{{ nb_repos }}</p>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
+            <p class="text-gray-500 text-lg">Vous n'avez aucune affectation cette semaine</p>
+            <p class="text-gray-400 text-sm mt-2">Profitez de votre repos !</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% else %}
+    <!-- Aucun planning -->
+    <div class="bg-white rounded-lg shadow-lg p-12 text-center">
+        <i class="fas fa-calendar-times text-gray-300 text-6xl mb-4"></i>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Aucun planning disponible</h3>
+        <p class="text-gray-600">Le planning de cette semaine n'a pas encore été généré.</p>
+        <p class="text-gray-500 text-sm mt-2">Veuillez contacter votre administrateur.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Informations utiles -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6">
+        <h3 class="text-lg font-bold text-blue-900 mb-3">
+            <i class="fas fa-info-circle mr-2"></i>Informations importantes
+        </h3>
+        <ul class="space-y-2 text-blue-800">
+            <li class="flex items-start">
+                <i class="fas fa-check-circle mt-1 mr-2"></i>
+                <span>Les plannings sont générés automatiquement chaque dimanche soir</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle mt-1 mr-2"></i>
+                <span>Vous recevrez une notification par email dès qu'un nouveau planning est disponible</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle mt-1 mr-2"></i>
+                <span>En cas d'indisponibilité, contactez votre administrateur au plus tôt</span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+// Import timedelta helper
+{% macro timedelta(days) %}
+import datetime; datetime.timedelta(days={{ days }})
+{% endmacro %}
+</script>
+{% endblock %}
+{% endblock %}

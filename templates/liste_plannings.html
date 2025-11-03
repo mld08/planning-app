@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Historique des Plannings{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- En-tête -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-history mr-2 text-purple-600"></i>Historique des plannings
+        </h1>
+        <form method="POST" action="{{ url_for('generer_planning') }}" class="inline">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105">
+                <i class="fas fa-magic mr-2"></i>Générer un nouveau planning
+            </button>
+        </form>
+    </div>
+    
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+            <p class="text-sm text-gray-600">Total plannings</p>
+            <p class="text-2xl font-bold text-gray-800">{{ plannings|length }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+            <p class="text-sm text-gray-600">Plannings actifs</p>
+            <p class="text-2xl font-bold text-gray-800">{{ plannings|selectattr('statut', 'equalto', 'actif')|list|length }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-gray-400">
+            <p class="text-sm text-gray-600">Plannings archivés</p>
+            <p class="text-2xl font-bold text-gray-800">{{ plannings|selectattr('statut', 'equalto', 'archive')|list|length }}</p>
+        </div>
+    </div>
+    
+    <!-- Liste des plannings -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        {% if plannings %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <i class="fas fa-calendar-week mr-1"></i>Semaine
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <i class="fas fa-calendar-alt mr-1"></i>Période
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <i class="fas fa-info-circle mr-1"></i>Statut
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <i class="fas fa-clock mr-1"></i>Créé le
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <i class="fas fa-cog mr-1"></i>Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for planning in plannings %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <span class="text-purple-600 font-bold">{{ planning.semaine }}</span>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">Semaine {{ planning.semaine }}</p>
+                                    <p class="text-xs text-gray-500">Année {{ planning.annee }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ planning.date_debut.strftime('%d/%m/%Y') }}</div>
+                            <div class="text-xs text-gray-500">au {{ planning.date_fin.strftime('%d/%m/%Y') }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if planning.statut == 'actif' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i> Actif
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                <i class="fas fa-archive mr-1"></i> Archivé
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ planning.cree_le.strftime('%d/%m/%Y') }}</div>
+                            <div class="text-xs text-gray-500">{{ planning.cree_le.strftime('%H:%M') }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <a href="{{ url_for('voir_planning', planning_id=planning.id) }}" 
+                               class="text-blue-600 hover:text-blue-900 inline-block">
+                                <i class="fas fa-eye"></i> Voir
+                            </a>
+                            <a href="{{ url_for('export_planning_pdf', planning_id=planning.id) }}" 
+                               class="text-red-600 hover:text-red-900 inline-block">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </a>
+                            <a href="{{ url_for('export_planning_excel', planning_id=planning.id) }}" 
+                               class="text-green-600 hover:text-green-900 inline-block">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </a>
+                            {% if planning.statut == 'actif' %}
+                            <form method="POST" action="{{ url_for('archiver_planning', planning_id=planning.id) }}" 
+                                  class="inline" onsubmit="return confirm('Archiver ce planning ?');">
+                                <button type="submit" class="text-gray-600 hover:text-gray-900">
+                                    <i class="fas fa-archive"></i> Archiver
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
+            <p class="text-gray-500 text-lg">Aucun planning disponible</p>
+            <form method="POST" action="{{ url_for('generer_planning') }}" class="inline mt-4">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">
+                    <i class="fas fa-magic mr-2"></i>Générer le premier planning
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Note informative -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-900 mb-2">À propos de la génération automatique</h3>
+                <p class="text-sm text-blue-700">
+                    Les plannings sont générés automatiquement chaque dimanche à 23h59 pour la semaine suivante. 
+                    Vous pouvez également générer manuellement un planning en utilisant le bouton ci-dessus.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

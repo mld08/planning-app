@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div class="text-center">
+            <div class="mx-auto h-20 w-20 bg-green-600 rounded-full flex items-center justify-center">
+                <i class="fas fa-user-plus text-white text-3xl"></i>
+            </div>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                {% if premier_utilisateur %}Configuration initiale{% else %}Créer un compte{% endif %}
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
+                {% if premier_utilisateur %}
+                Créez le premier compte administrateur
+                {% else %}
+                Ajouter un nouvel utilisateur
+                {% endif %}
+            </p>
+        </div>
+        
+        <form class="mt-8 space-y-6 bg-white shadow-lg rounded-lg p-8" method="POST">
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="prenom" class="block text-sm font-medium text-gray-700 mb-2">
+                            Prénom
+                        </label>
+                        <input id="prenom" name="prenom" type="text" required 
+                               class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                               placeholder="Jean">
+                    </div>
+                    
+                    <div>
+                        <label for="nom" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom
+                        </label>
+                        <input id="nom" name="nom" type="text" required 
+                               class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                               placeholder="Dupont">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-envelope mr-2 text-green-600"></i>Email
+                    </label>
+                    <input id="email" name="email" type="email" required 
+                           class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                           placeholder="jean.dupont@example.com">
+                </div>
+
+                <!-- Username -->
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-1 text-green-600"></i>Nom d'utilisateur
+                    </label>
+                    <input type="text" name="username" id="username"
+                           class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                           placeholder="johndoe">
+                    <p class="mt-1 text-sm text-gray-500">Optionnel - pour connexion alternative</p>
+                </div>
+                
+                <!-- Téléphone -->
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-phone mr-1 text-green-600"></i>Téléphone
+                    </label>
+                    <input type="tel" name="phone" id="phone"
+                           class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                           placeholder="+221 77 123 45 67">
+                </div>
+                
+                <!-- Fonction -->
+                <div>
+                    <label for="fonction" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-briefcase mr-1 text-green-600"></i>Fonction
+                    </label>
+                    <input type="text" name="fonction" id="fonction"
+                           class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                           placeholder="Inspecteur, Agent de sécurité, etc.">
+                </div>
+                
+                <!-- Chef de mission -->
+                <div>
+                    <label for="chef_de_mission" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user-tie mr-1 text-green-600"></i>Chef de mission
+                    </label>
+                    <input type="text" name="chef_de_mission" id="chef_de_mission"
+                           class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                           placeholder="Nom du chef de mission">
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-2 text-green-600"></i>Mot de passe
+                    </label>
+                    <input id="password" name="password" type="password" required 
+                           class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                           placeholder="••••••••">
+                </div>
+                
+                {% if not premier_utilisateur and current_user.is_authenticated and current_user.role == 'admin' %}
+                <div>
+                    <label for="role" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user-tag mr-2 text-green-600"></i>Rôle
+                    </label>
+                    <select id="role" name="role" 
+                            class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                        <option value="agent">Agent</option>
+                        <option value="admin">Administrateur</option>
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out transform hover:scale-105">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    Créer le compte
+                </button>
+            </div>
+        </form>
+        
+        {% if not premier_utilisateur %}
+        <div class="text-center">
+            <a href="{{ url_for('login') }}" class="font-medium text-blue-600 hover:text-blue-500">
+                <i class="fas fa-arrow-left mr-2"></i>Retour à la connexion
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
