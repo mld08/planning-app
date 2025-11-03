@@ -239,12 +239,12 @@ def ajouter_agent():
     if request.method == 'POST':
         nom = request.form.get('nom')
         prenom = request.form.get('prenom')
-        username = request.form.get('username')
+        username = request.form.get('username') or None
         email = request.form.get('email') or ''
         phone = request.form.get('phone') or ''
-        password = request.form.get('password')
+        password = request.form.get('password') or 'defaultpassword'
         fonction = request.form.get('fonction')
-        chef_de_mission = request.form.get('chef_de_mission')
+        chef_de_mission = request.form.get('chef_de_mission') or ''
 
         if User.query.filter_by(email=email).first():
             flash('Cet email est déjà utilisé.', 'danger')
@@ -285,10 +285,10 @@ def modifier_agent(agent_id):
     if request.method == 'POST':
         agent.nom = request.form.get('nom')
         agent.prenom = request.form.get('prenom')
-        agent.username = request.form.get('username')
-        agent.phone = request.form.get('phone')
-        agent.email = request.form.get('email')
-        agent.fonction = request.form.get('fonction')
+        agent.username = request.form.get('username') or None
+        agent.phone = request.form.get('phone') or ''
+        agent.email = request.form.get('email') or ''
+        agent.fonction = request.form.get('fonction') 
         agent.chef_de_mission = request.form.get('chef_de_mission')
         agent.disponibilite = request.form.get('disponibilite') == 'on'
         

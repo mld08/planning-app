@@ -65,7 +65,7 @@ class PlanningScheduler:
             db.session.commit()
             
             # Envoyer les notifications par email
-            self._envoyer_notifications(planning)
+            #self._envoyer_notifications(planning)
             
             print(f"Planning généré avec succès pour la semaine du {date_debut}")
             return planning

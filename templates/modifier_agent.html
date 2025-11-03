@@ -52,7 +52,7 @@
             </div>
 
             <!-- Username -->
-            <div>
+            <!-- <div>
                 <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
                     <i class="fas fa-user mr-1 text-blue-600"></i>Nom d'utilisateur
                 </label>
@@ -60,7 +60,7 @@
                        value="{{ agent.username or '' }}"
                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
                 <p class="mt-1 text-sm text-gray-500">Optionnel - pour connexion alternative</p>
-            </div>
+            </div> -->
             
             <!-- Téléphone -->
             <div>
@@ -77,9 +77,18 @@
                 <label for="fonction" class="block text-sm font-medium text-gray-700 mb-2">
                     <i class="fas fa-briefcase mr-1 text-blue-600"></i>Fonction
                 </label>
-                <input type="text" name="fonction" id="fonction"
+                <!-- <input type="text" name="fonction" id="fonction"
                        value="{{ agent.fonction or '' }}"
-                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition"> -->
+
+                <select name="fonction" id="fonction"
+                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition">
+                    <option value="" disabled {% if not agent.fonction %}selected{% endif %}>-- Sélectionnez une fonction --</option>
+                    <option value="Inspecteur" {% if agent.fonction == 'Inspecteur' %}selected{% endif %}>Inspecteur</option>
+                    <option value="Observateur" {% if agent.fonction == 'Observateur' %}selected{% endif %}>Observateur</option>
+                    <option value="Chauffeur" {% if agent.fonction == 'Chauffeur' %}selected{% endif %}>Chauffeur</option>
+                    <option value="Opérateur Veille" {% if agent.fonction == 'Opérateur Veille' %}selected{% endif %}>Opérateur Veille</option>
+                </select>
             </div>
             
             <!-- Chef de mission -->
@@ -108,7 +117,7 @@
             </div>
             
             <!-- Mot de passe -->
-            <div>
+            <!-- <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
                     <i class="fas fa-lock mr-1 text-blue-600"></i>Nouveau mot de passe
                 </label>
@@ -116,7 +125,7 @@
                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border transition"
                        placeholder="Laisser vide pour ne pas changer">
                 <p class="mt-1 text-sm text-gray-500">Laissez ce champ vide si vous ne souhaitez pas changer le mot de passe</p>
-            </div>
+            </div> -->
             
             <!-- Statistiques (lecture seule) -->
             <div class="bg-gray-50 rounded-lg p-4">
