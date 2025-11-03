@@ -8,10 +8,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'votre-cle-secrete-tres-complexe-ici'
     
     # Configuration de la base de données MySQL
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-       'mysql+pymysql://planning_user:planning_pass_2025@localhost/planning_db'
-    # SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-    #    'mysql+pymysql://digbdspc_planning:Adp1fidx$@localhost/digbdspc_planning'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Configuration Flask-Login
