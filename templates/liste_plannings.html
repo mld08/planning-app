@@ -110,6 +110,12 @@
                                 </button>
                             </form>
                             {% endif %}
+                            <form method="POST" action="{{ url_for('supprimer_planning', planning_id=planning.id) }}" 
+                                  class="inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement ce planning ? Cette action est irréversible.');">
+                                <button type="submit" class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}

@@ -28,6 +28,8 @@ class User(UserMixin, db.Model):
     est_chef_equipe_bvp = db.Column(db.Boolean, default=False)
     est_chef_equipe_usine = db.Column(db.Boolean, default=False)
     est_observateur_embarque = db.Column(db.Boolean, default=False)
+    est_chauffeur = db.Column(db.Boolean, default=False)
+    est_operateur_veille_crss = db.Column(db.Boolean, default=False)
     date_embarquement = db.Column(db.Date, nullable=True)
     date_debarquement_prevue = db.Column(db.Date, nullable=True)
     compteur_jour = db.Column(db.Integer, default=0)

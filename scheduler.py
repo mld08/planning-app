@@ -6,7 +6,7 @@ import random
 
 
 class PlanningScheduler:
-    """Gestionnaire de planification automatique des équipes avec contraintes métier"""
+    """Gestionnaire de planification automatique des Ã©quipes avec contraintes mÃ©tier"""
     
     def __init__(self, app=None, mail=None):
         self.app = app
@@ -14,16 +14,16 @@ class PlanningScheduler:
     
     def generer_planning_semaine(self, date_debut=None):
         """
-        Génère automatiquement le planning pour une semaine
+        GÃ©nÃ¨re automatiquement le planning pour une semaine
         
         Args:
-            date_debut: Date de début de la semaine (lundi). Si None, prend la semaine suivante.
+            date_debut: Date de dÃ©but de la semaine (lundi). Si None, prend la semaine suivante.
         
         Returns:
-            Planning: Le planning créé
+            Planning: Le planning crÃ©Ã©
         """
         with self.app.app_context():
-            # Déterminer la date de début (lundi prochain si non spécifié)
+            # DÃ©terminer la date de dÃ©but (lundi prochain si non spÃ©cifiÃ©)
             if date_debut is None:
                 aujourd_hui = date.today()
                 jours_jusqua_lundi = (7 - aujourd_hui.weekday()) % 7
@@ -33,16 +33,16 @@ class PlanningScheduler:
             
             date_fin = date_debut + timedelta(days=6)  # Dimanche
             
-            # Vérifier si un planning existe déjà pour cette semaine
+            # VÃ©rifier si un planning existe dÃ©jÃ  pour cette semaine
             planning_existant = Planning.query.filter(
                 Planning.date_debut == date_debut
             ).first()
             
             if planning_existant:
-                print(f"Un planning existe déjà pour la semaine du {date_debut}")
+                print(f"Un planning existe dÃ©jÃ  pour la semaine du {date_debut}")
                 return planning_existant
             
-            # Créer le nouveau planning
+            # CrÃ©er le nouveau planning
             semaine = date_debut.isocalendar()[1]
             annee = date_debut.year
             
@@ -57,7 +57,7 @@ class PlanningScheduler:
             db.session.add(planning)
             db.session.flush()  # Pour obtenir l'ID du planning
             
-            # Générer les affectations pour chaque jour
+            # GÃ©nÃ©rer les affectations pour chaque jour
             for i in range(7):
                 jour = date_debut + timedelta(days=i)
                 self._generer_affectations_jour(planning, jour)
@@ -67,21 +67,21 @@ class PlanningScheduler:
             # Envoyer les notifications par email
             #self._envoyer_notifications(planning)
             
-            print(f"Planning généré avec succès pour la semaine du {date_debut}")
+            print(f"Planning gÃ©nÃ©rÃ© avec succÃ¨s pour la semaine du {date_debut}")
             return planning
     
     def _verifier_contraintes_agent(self, agent, shift, equipe, poste, jour):
         """
-        Vérifie si un agent peut être affecté selon les contraintes métier
+        VÃ©rifie si un agent peut Ãªtre affectÃ© selon les contraintes mÃ©tier
         
-        Contraintes vérifiées:
+        Contraintes vÃ©rifiÃ©es:
         1. Femmes exclues des horaires nocturnes (17h-8h)
-        2. Chefs d'équipe/bureau exclus des veilles nocturnes
-        3. Inspecteurs Certification Aéroport exclus du CRSS
-        7. Observateurs embarqués exclus jusqu'à débarquement
+        2. Chefs d'Ã©quipe/bureau exclus des veilles nocturnes
+        3. Inspecteurs Certification AÃ©roport exclus du CRSS
+        7. Observateurs embarquÃ©s exclus jusqu'Ã  dÃ©barquement
         
         Args:
-            agent: L'agent à vérifier
+            agent: L'agent Ã  vÃ©rifier
             shift: 'jour' ou 'nuit'
             equipe: 'CRSS' ou 'BVP'
             poste: 'chef', 'inspecteur', 'agent'
@@ -92,48 +92,48 @@ class PlanningScheduler:
         """
         from contraintes import est_nom_dans_liste, INSPECTEURS_CERTIFICATION_AEROPORT
         
-        # Contrainte 7 : Observateurs embarqués
+        # Contrainte 7 : Observateurs embarquÃ©s
         if agent.est_observateur_embarque:
             if agent.date_debarquement_prevue and jour <= agent.date_debarquement_prevue:
-                return False, f"Agent embarqué jusqu'au {agent.date_debarquement_prevue.strftime('%d/%m/%Y')}"
+                return False, f"Agent embarquÃ© jusqu'au {agent.date_debarquement_prevue.strftime('%d/%m/%Y')}"
         
         # Contrainte 1a : Femmes exclues des horaires nocturnes (17h-8h)
         if agent.genre == 'femme' and shift == 'nuit':
             return False, "Femmes exclues des horaires nocturnes (Contrainte 1)"
         
-        # Contrainte 2 : Chefs d'équipe/bureau exclus des veilles nocturnes
+        # Contrainte 2 : Chefs d'Ã©quipe/bureau exclus des veilles nocturnes
         if shift == 'nuit' and (agent.est_chef_equipe or agent.est_chef_bureau):
-            return False, "Chefs d'équipe/bureau exclus des veilles nocturnes (Contrainte 2)"
+            return False, "Chefs d'Ã©quipe/bureau exclus des veilles nocturnes (Contrainte 2)"
         
-        # Contrainte 3 : Inspecteurs Certification Aéroport exclus du CRSS
+        # Contrainte 3 : Inspecteurs Certification AÃ©roport exclus du CRSS
         if equipe == 'CRSS':
             if agent.est_certification_aeroport:
-                return False, "Inspecteur Certification Aéroport exclu du CRSS (Contrainte 3)"
+                return False, "Inspecteur Certification AÃ©roport exclu du CRSS (Contrainte 3)"
             
-            # Vérifier aussi par nom (fallback si le champ n'est pas renseigné)
+            # VÃ©rifier aussi par nom (fallback si le champ n'est pas renseignÃ©)
             if est_nom_dans_liste(agent.prenom, agent.nom, INSPECTEURS_CERTIFICATION_AEROPORT):
-                return False, "Inspecteur Certification Aéroport exclu du CRSS (Contrainte 3)"
+                return False, "Inspecteur Certification AÃ©roport exclu du CRSS (Contrainte 3)"
         
         return True, ""
     
     def _peut_etre_chef_equipe_bvp(self, agent, planning):
         """
-        Vérifie si un agent peut être chef d'équipe BVP cette semaine
+        VÃ©rifie si un agent peut Ãªtre chef d'Ã©quipe BVP cette semaine
         
-        Contrainte 5 : Ne pas programmer le même chef d'équipe BVP 2 fois dans la semaine
+        Contrainte 5 : Ne pas programmer le mÃªme chef d'Ã©quipe BVP 2 fois dans la semaine
         
         Args:
-            agent: L'agent à vérifier
+            agent: L'agent Ã  vÃ©rifier
             planning: Le planning de la semaine
         
         Returns:
-            bool: True si l'agent peut être chef d'équipe BVP
+            bool: True si l'agent peut Ãªtre chef d'Ã©quipe BVP
         """
-        # Vérifier si l'agent est chef d'équipe BVP
+        # VÃ©rifier si l'agent est chef d'Ã©quipe BVP
         if not agent.est_chef_equipe_bvp:
             return False
         
-        # Compter combien de fois cet agent est déjà chef d'équipe BVP cette semaine
+        # Compter combien de fois cet agent est dÃ©jÃ  chef d'Ã©quipe BVP cette semaine
         nb_fois_chef_bvp = Affectation.query.filter_by(
             planning_id=planning.id,
             agent_id=agent.id,
@@ -146,9 +146,9 @@ class PlanningScheduler:
     
     def _selectionner_chef_equipe_bvp(self, agents, planning):
         """
-        Sélectionne un chef d'équipe BVP selon les contraintes
+        SÃ©lectionne un chef d'Ã©quipe BVP selon les contraintes
         
-        Contrainte 4 : Liste des chefs d'équipe BVP
+        Contrainte 4 : Liste des chefs d'Ã©quipe BVP
         Contrainte 5 : Maximum 1 fois par semaine
         
         Args:
@@ -156,31 +156,31 @@ class PlanningScheduler:
             planning: Le planning de la semaine
         
         Returns:
-            User: Le chef d'équipe sélectionné ou None
+            User: Le chef d'Ã©quipe sÃ©lectionnÃ© ou None
         """
         from contraintes import est_nom_dans_liste, CHEFS_EQUIPE_BVP
         
-        # Filtrer les agents qui peuvent être chef d'équipe BVP
+        # Filtrer les agents qui peuvent Ãªtre chef d'Ã©quipe BVP
         candidats = []
         for agent in agents:
-            # Vérifier si l'agent est dans la liste des chefs BVP (Contrainte 4)
+            # VÃ©rifier si l'agent est dans la liste des chefs BVP (Contrainte 4)
             if agent.est_chef_equipe_bvp or est_nom_dans_liste(agent.prenom, agent.nom, CHEFS_EQUIPE_BVP):
-                # Vérifier qu'il n'a pas déjà été chef cette semaine (Contrainte 5)
+                # VÃ©rifier qu'il n'a pas dÃ©jÃ  Ã©tÃ© chef cette semaine (Contrainte 5)
                 if self._peut_etre_chef_equipe_bvp(agent, planning):
                     candidats.append(agent)
         
-        # Retourner le premier candidat (déjà trié par rotation)
+        # Retourner le premier candidat (dÃ©jÃ  triÃ© par rotation)
         return candidats[0] if candidats else None
     
     def _generer_affectations_jour(self, planning, jour):
         """
-        Génère les affectations pour un jour donné EN RESPECTANT TOUTES LES CONTRAINTES
+        GÃ©nÃ¨re les affectations pour un jour donnÃ© EN RESPECTANT TOUTES LES CONTRAINTES
         
         Args:
             planning: L'objet Planning
             jour: La date du jour
         """
-        # Récupérer tous les agents disponibles
+        # RÃ©cupÃ©rer tous les agents disponibles
         agents_disponibles = User.query.filter_by(
             role='agent',
             disponibilite=True
@@ -189,7 +189,7 @@ class PlanningScheduler:
         if len(agents_disponibles) < 6:
             raise Exception(f"Pas assez d'agents disponibles ({len(agents_disponibles)}/6 requis)")
         
-        # Trier les agents selon les règles de rotation
+        # Trier les agents selon les rÃ¨gles de rotation
         agents_tries = self._trier_agents_rotation(agents_disponibles, jour)
         
         # ========== VEILLE CRSS (1 jour + 1 nuit) ==========
@@ -212,10 +212,10 @@ class PlanningScheduler:
         
         # ========== BRIGADE PORTUAIRE (BVP) ==========
         
-        # Chef d'équipe BVP (JOUR) - Contrainte 4 & 5 appliquées
+        # Chef d'Ã©quipe BVP (JOUR) - Contrainte 4 & 5 appliquÃ©es
         chef = self._selectionner_chef_equipe_bvp(agents_tries, planning)
         if not chef:
-            # Si aucun chef d'équipe BVP disponible, prendre un agent normal pour le jour
+            # Si aucun chef d'Ã©quipe BVP disponible, prendre un agent normal pour le jour
             chef = self._selectionner_agent_shift(agents_tries, 'jour', jour, equipe='BVP', poste='chef')
         
         if chef:
@@ -250,14 +250,14 @@ class PlanningScheduler:
     
     def _trier_agents_rotation(self, agents, jour):
         """
-        Trie les agents selon les règles de rotation équitable
+        Trie les agents selon les rÃ¨gles de rotation Ã©quitable
         
         Args:
             agents: Liste des agents disponibles
             jour: Date du jour
         
         Returns:
-            Liste triée d'agents
+            Liste triÃ©e d'agents
         """
         # Calculer un score pour chaque agent
         agents_scores = []
@@ -265,14 +265,14 @@ class PlanningScheduler:
         for agent in agents:
             score = 0
             
-            # Privilégier ceux qui ont le moins travaillé
+            # PrivilÃ©gier ceux qui ont le moins travaillÃ©
             score += (agent.compteur_jour + agent.compteur_nuit) * 100
             
-            # Pénaliser si a travaillé récemment
+            # PÃ©naliser si a travaillÃ© rÃ©cemment
             if agent.derniere_affectation:
                 jours_depuis = (jour - agent.derniere_affectation).days
                 if jours_depuis < 2:
-                    score += 1000  # Forte pénalité
+                    score += 1000  # Forte pÃ©nalitÃ©
                 elif jours_depuis < 4:
                     score += 500
             
@@ -292,11 +292,14 @@ class PlanningScheduler:
             shift: 'jour' ou 'nuit'
             jour: Date du jour
             equipe: 'CRSS' ou 'BVP'
-            poste: 'chef', 'inspecteur', 'agent'
+            poste: 'chef', 'inspecteur', 'agent', 'chauffeur'
         
         Returns:
             User: L'agent sélectionné ou None
         """
+        # Trier les agents par pertinence selon le poste
+        agents_tries = []
+        
         for agent in agents:
             # ===== VÉRIFIER LES CONTRAINTES MÉTIER AVANT TOUT =====
             peut_etre_affecte, raison = self._verifier_contraintes_agent(agent, shift, equipe, poste, jour)
@@ -337,17 +340,37 @@ class PlanningScheduler:
             if affectation_aujourdhui:
                 continue
             
-            return agent
+            # Calculer un score de pertinence
+            score = 0
+            
+            # PRIVILÉGIER les agents avec les bonnes contraintes
+            if equipe == 'CRSS' and agent.est_operateur_veille_crss:
+                score -= 1000  # Forte priorité pour opérateurs CRSS
+            
+            if poste == 'chauffeur' and agent.est_chauffeur:
+                score -= 1000  # Forte priorité pour chauffeurs
+            
+            if 'chauffeur' in str(agent.fonction).lower():
+                score -= 500  # Priorité moyenne si fonction = chauffeur
+            
+            agents_tries.append((agent, score))
+        
+        # Trier par score (plus bas = meilleur)
+        agents_tries.sort(key=lambda x: x[1])
+        
+        # Retourner le meilleur agent
+        if agents_tries:
+            return agents_tries[0][0]
         
         return None
     
     def _creer_affectation(self, planning, agent, jour, shift, equipe, poste):
         """
-        Crée une affectation et met à jour les compteurs de l'agent
+        CrÃ©e une affectation et met Ã  jour les compteurs de l'agent
         
         Args:
             planning: L'objet Planning
-            agent: L'agent à affecter
+            agent: L'agent Ã  affecter
             jour: Date du jour
             shift: 'jour' ou 'nuit'
             equipe: 'CRSS' ou 'BVP'
@@ -364,7 +387,7 @@ class PlanningScheduler:
         
         db.session.add(affectation)
         
-        # Mettre à jour les compteurs de l'agent
+        # Mettre Ã  jour les compteurs de l'agent
         if shift == 'jour':
             agent.compteur_jour += 1
         else:
@@ -377,22 +400,22 @@ class PlanningScheduler:
     
     def _envoyer_notifications(self, planning):
         """
-        Envoie les notifications par email à tous les agents affectés
+        Envoie les notifications par email Ã  tous les agents affectÃ©s
         
         Args:
             planning: L'objet Planning
         """
         if not self.mail:
-            print("Service email non configuré, notifications non envoyées")
+            print("Service email non configurÃ©, notifications non envoyÃ©es")
             return
         
-        # Récupérer tous les agents affectés pour ce planning
+        # RÃ©cupÃ©rer tous les agents affectÃ©s pour ce planning
         agents_affectations = db.session.query(User).join(Affectation).filter(
             Affectation.planning_id == planning.id
         ).distinct().all()
         
         for agent in agents_affectations:
-            # Récupérer toutes les affectations de cet agent pour cette semaine
+            # RÃ©cupÃ©rer toutes les affectations de cet agent pour cette semaine
             affectations = Affectation.query.filter_by(
                 planning_id=planning.id,
                 agent_id=agent.id
@@ -403,7 +426,7 @@ class PlanningScheduler:
     
     def _envoyer_email_agent(self, agent, planning, affectations):
         """
-        Envoie un email à un agent avec son planning
+        Envoie un email Ã  un agent avec son planning
         
         Args:
             agent: L'agent
@@ -412,7 +435,7 @@ class PlanningScheduler:
         """
         jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
         
-        # Créer un dictionnaire des affectations par jour
+        # CrÃ©er un dictionnaire des affectations par jour
         affectations_par_jour = {}
         for aff in affectations:
             affectations_par_jour[aff.jour] = aff
@@ -443,7 +466,7 @@ Voici votre planning pour la semaine du {planning.date_debut.strftime('%d/%m/%Y'
 Merci et bon service !
 
 ---
-Direction de la Protection et de la Surveillance des Pêches (DPSP)
+Direction de la Protection et de la Surveillance des PÃªches (DPSP)
 Service de planification automatique
 """
         
@@ -455,16 +478,16 @@ Service de planification automatique
             )
             if agent.email:
                 self.mail.send(msg)
-                print(f"Email envoyé à {agent.email}")
+                print(f"Email envoyÃ© Ã  {agent.email}")
         except Exception as e:
-            print(f"Erreur lors de l'envoi de l'email à {agent.email if agent.email else 'N/A'}: {str(e)}")
+            print(f"Erreur lors de l'envoi de l'email Ã  {agent.email if agent.email else 'N/A'}: {str(e)}")
     
     def archiver_anciens_plannings(self, jours=30):
         """
         Archive les plannings de plus de X jours
         
         Args:
-            jours: Nombre de jours après lesquels archiver
+            jours: Nombre de jours aprÃ¨s lesquels archiver
         """
         with self.app.app_context():
             date_limite = date.today() - timedelta(days=jours)
@@ -479,4 +502,4 @@ Service de planification automatique
                 db.session.add(planning)
             
             db.session.commit()
-            print(f"{len(plannings)} plannings archivés")
+            print(f"{len(plannings)} plannings archivÃ©s")
