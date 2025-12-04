@@ -28,7 +28,6 @@ def init_database():
                 # Demander les informations
                 prenom = "Admin"
                 nom = ""
-                email = "admin@gmail.com"
                 username = "admin"
                 
                 while True:
@@ -41,23 +40,29 @@ def init_database():
                 admin = User(
                     prenom=prenom,
                     nom=nom,
-                    email=email,
-                    role='admin',
                     username=username,
+                    role='admin',
                     disponibilite=True,
-                    fonction="Administrateur",
-                    chef_de_mission=None,
-                    phone=None
+                    fonction="Administrateur"
                 )
                 admin.set_password(password)
+
+                admin2 = User(
+                    prenom="B",
+                    nom="Plan",
+                    username="bplan",
+                    role='admin',
+                    disponibilite=True,
+                    fonction="Administrateur"
+                )
+                admin2.set_password("bplan@25")
                 
                 db.session.add(admin)
+                db.session.add(admin2)
                 db.session.commit()
                 
                 print(f"\n✅ Administrateur créé avec succès!")
-                print(f"   Email: {email}")
                 print(f"   Nom: {prenom} {nom}")
-                print(f"   Email: {email}")
                 print(f"   Username: {username}")
                 print(f"   Mot de passe: {password}")
             else:

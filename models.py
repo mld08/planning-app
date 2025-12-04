@@ -12,26 +12,40 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
     prenom = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), unique=False, nullable=False, index=True)
+    #email = db.Column(db.String(120), unique=False, nullable=False, index=True)
     username = db.Column(db.String(50), unique=True, nullable=True, index=True)  # NOUVEAU
     phone = db.Column(db.String(20), nullable=True)
     mot_de_passe = db.Column(db.String(255), nullable=False)
     fonction = db.Column(db.String(100), nullable=True)
-    chef_de_mission = db.Column(db.String(100), nullable=True)
+    #chef_de_mission = db.Column(db.String(100), nullable=True)
     role = db.Column(db.String(20), nullable=False, default='agent')  # 'admin' ou 'agent'
     disponibilite = db.Column(db.Boolean, default=True)
     # ========== NOUVEAUX CHAMPS POUR LES CONTRAINTES ==========
     genre = db.Column(db.String(10), nullable=True)  # 'homme', 'femme'
-    est_chef_equipe = db.Column(db.Boolean, default=False)
+    #est_chef_equipe = db.Column(db.Boolean, default=False)
     est_chef_bureau = db.Column(db.Boolean, default=False)
     est_certification_aeroport = db.Column(db.Boolean, default=False)
     est_chef_equipe_bvp = db.Column(db.Boolean, default=False)
     est_chef_equipe_usine = db.Column(db.Boolean, default=False)
-    est_observateur_embarque = db.Column(db.Boolean, default=False)
+    #est_observateur_embarque = db.Column(db.Boolean, default=False)
     est_chauffeur = db.Column(db.Boolean, default=False)
     est_operateur_veille_crss = db.Column(db.Boolean, default=False)
+    est_absent = db.Column(db.Boolean, default=False)
     date_embarquement = db.Column(db.Date, nullable=True)
     date_debarquement_prevue = db.Column(db.Date, nullable=True)
+    certification_dpsp = db.Column(db.Boolean, default=False)
+    #Activites Operationnelles
+    aeroport = db.Column(db.Boolean, default=False)
+    patrouille_cotiere = db.Column(db.Boolean, default=False)
+    inspection_usine = db.Column(db.Boolean, default=False)
+    patrouille_aerienne = db.Column(db.Boolean, default=False)
+    gardiennage = db.Column(db.Boolean, default=False)
+    courrier = db.Column(db.Boolean, default=False)
+    missions = db.Column(db.Boolean, default=False)
+    crss = db.Column(db.Boolean, default=False)
+    bvp = db.Column(db.Boolean, default=False)
+    certification = db.Column(db.Boolean, default=False)
+    # ========================================================
     compteur_jour = db.Column(db.Integer, default=0)
     compteur_nuit = db.Column(db.Integer, default=0)
     dernier_shift = db.Column(db.String(10), nullable=True)  # 'jour', 'nuit', ou None
@@ -93,15 +107,19 @@ class Affectation(db.Model):
     agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     jour = db.Column(db.Date, nullable=False)
     shift = db.Column(db.String(10), nullable=False)  # 'jour' ou 'nuit'
-    equipe = db.Column(db.String(20), nullable=False)  # 'CRSS' ou 'BVP'
+    #equipe = db.Column(db.String(20), nullable=False)  # 'CRSS' ou 'BVP'
+    activite = db.Column(db.String(50), nullable=False)  # Type d'activité
+    sous_activite = db.Column(db.String(50), nullable=True)  # Sous-catégorie (ex: "Journée", "Nuit", "Chef d'équipe")
     poste = db.Column(db.String(50), nullable=True)  # 'chef', 'inspecteur', 'agent'
     notes = db.Column(db.Text, nullable=True)
     cree_le = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Index composé pour optimiser les requêtes
+    # Index composé pour optimiser les requêtes
     __table_args__ = (
         db.Index('idx_planning_jour', 'planning_id', 'jour'),
         db.Index('idx_agent_jour', 'agent_id', 'jour'),
+        db.Index('idx_activite', 'activite'),  # NOUVEAU
     )
     
     def __repr__(self):

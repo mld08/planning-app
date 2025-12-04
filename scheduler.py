@@ -64,26 +64,23 @@ class PlanningScheduler:
             
             db.session.commit()
             
-            # Envoyer les notifications par email
-            #self._envoyer_notifications(planning)
-            
             print(f"Planning gÃ©nÃ©rÃ© avec succÃ¨s pour la semaine du {date_debut}")
             return planning
     
-    def _verifier_contraintes_agent(self, agent, shift, equipe, poste, jour):
+    def _verifier_contraintes_agent(self, agent, shift, activite, poste, jour):
         """
-        VÃ©rifie si un agent peut Ãªtre affectÃ© selon les contraintes mÃ©tier
+        Vérifie si un agent peut être affecté selon les contraintes métier
         
-        Contraintes vÃ©rifiÃ©es:
+        Contraintes vérifiées:
         1. Femmes exclues des horaires nocturnes (17h-8h)
-        2. Chefs d'Ã©quipe/bureau exclus des veilles nocturnes
-        3. Inspecteurs Certification AÃ©roport exclus du CRSS
-        7. Observateurs embarquÃ©s exclus jusqu'Ã  dÃ©barquement
+        2. Chefs d'équipe/bureau exclus des veilles nocturnes
+        3. Inspecteurs Certification Aéroport exclus du CRSS
+        7. Observateurs embarqués exclus jusqu'à débarquement
         
         Args:
-            agent: L'agent Ã  vÃ©rifier
+            agent: L'agent à vérifier
             shift: 'jour' ou 'nuit'
-            equipe: 'CRSS' ou 'BVP'
+            activite: Type d'activité (ex: 'VEILLE_CRSS', 'BVP', etc.)
             poste: 'chef', 'inspecteur', 'agent'
             jour: Date du jour
         
@@ -92,53 +89,46 @@ class PlanningScheduler:
         """
         from contraintes import est_nom_dans_liste, INSPECTEURS_CERTIFICATION_AEROPORT
         
-        # Contrainte 7 : Observateurs embarquÃ©s
-        if agent.est_observateur_embarque:
+        # Contrainte 7 : Observateurs embarqués
+        if hasattr(agent, 'date_embarquement') and agent.date_embarquement:
             if agent.date_debarquement_prevue and jour <= agent.date_debarquement_prevue:
-                return False, f"Agent embarquÃ© jusqu'au {agent.date_debarquement_prevue.strftime('%d/%m/%Y')}"
+                return False, f"Agent embarqué jusqu'au {agent.date_debarquement_prevue.strftime('%d/%m/%Y')}"
         
         # Contrainte 1a : Femmes exclues des horaires nocturnes (17h-8h)
         if agent.genre == 'femme' and shift == 'nuit':
             return False, "Femmes exclues des horaires nocturnes (Contrainte 1)"
         
-        # Contrainte 2 : Chefs d'Ã©quipe/bureau exclus des veilles nocturnes
-        if shift == 'nuit' and (agent.est_chef_equipe or agent.est_chef_bureau):
-            return False, "Chefs d'Ã©quipe/bureau exclus des veilles nocturnes (Contrainte 2)"
+        # Contrainte 2 : Chefs d'équipe/bureau exclus des veilles nocturnes
+        if shift == 'nuit' and agent.est_chef_bureau:
+            return False, "Chefs de bureau exclus des veilles nocturnes (Contrainte 2)"
         
-        # Contrainte 3 : Inspecteurs Certification AÃ©roport exclus du CRSS
-        if equipe == 'CRSS':
+        # Contrainte 3 : Inspecteurs Certification Aéroport exclus du CRSS
+        if activite == 'VEILLE_CRSS':
             if agent.est_certification_aeroport:
-                return False, "Inspecteur Certification AÃ©roport exclu du CRSS (Contrainte 3)"
+                return False, "Inspecteur Certification Aéroport exclu du CRSS (Contrainte 3)"
             
-            # VÃ©rifier aussi par nom (fallback si le champ n'est pas renseignÃ©)
+            # Vérifier aussi par nom (fallback si le champ n'est pas renseigné)
             if est_nom_dans_liste(agent.prenom, agent.nom, INSPECTEURS_CERTIFICATION_AEROPORT):
-                return False, "Inspecteur Certification AÃ©roport exclu du CRSS (Contrainte 3)"
+                return False, "Inspecteur Certification Aéroport exclu du CRSS (Contrainte 3)"
         
         return True, ""
     
     def _peut_etre_chef_equipe_bvp(self, agent, planning):
         """
-        VÃ©rifie si un agent peut Ãªtre chef d'Ã©quipe BVP cette semaine
+        Vérifie si un agent peut être chef d'équipe BVP cette semaine
         
-        Contrainte 5 : Ne pas programmer le mÃªme chef d'Ã©quipe BVP 2 fois dans la semaine
-        
-        Args:
-            agent: L'agent Ã  vÃ©rifier
-            planning: Le planning de la semaine
-        
-        Returns:
-            bool: True si l'agent peut Ãªtre chef d'Ã©quipe BVP
+        Contrainte 5 : Ne pas programmer le même chef d'équipe BVP 2 fois dans la semaine
         """
-        # VÃ©rifier si l'agent est chef d'Ã©quipe BVP
         if not agent.est_chef_equipe_bvp:
             return False
         
-        # Compter combien de fois cet agent est dÃ©jÃ  chef d'Ã©quipe BVP cette semaine
+        # Compter combien de fois cet agent est déjà chef d'équipe BVP cette semaine
         nb_fois_chef_bvp = Affectation.query.filter_by(
             planning_id=planning.id,
             agent_id=agent.id,
-            equipe='BVP',
-            poste='chef'
+            activite='BVP'
+        ).filter(
+            Affectation.sous_activite.like("%Chef%")
         ).count()
         
         # Maximum 1 fois par semaine (Contrainte 5)
@@ -172,82 +162,236 @@ class PlanningScheduler:
         # Retourner le premier candidat (dÃ©jÃ  triÃ© par rotation)
         return candidats[0] if candidats else None
     
+    # def _generer_affectations_jour(self, planning, jour):
+    #     """
+    #     GÃ©nÃ¨re les affectations pour un jour donnÃ© EN RESPECTANT TOUTES LES CONTRAINTES
+        
+    #     Args:
+    #         planning: L'objet Planning
+    #         jour: La date du jour
+    #     """
+    #     # RÃ©cupÃ©rer tous les agents disponibles
+    #     agents_disponibles = User.query.filter_by(
+    #         role='agent',
+    #         disponibilite=True
+    #     ).all()
+        
+    #     if len(agents_disponibles) < 6:
+    #         raise Exception(f"Pas assez d'agents disponibles ({len(agents_disponibles)}/6 requis)")
+        
+    #     # Trier les agents selon les rÃ¨gles de rotation
+    #     agents_tries = self._trier_agents_rotation(agents_disponibles, jour)
+        
+    #     # ========== VEILLE CRSS (1 jour + 1 nuit) ==========
+        
+    #     # Agent CRSS JOUR
+    #     agent_crss_jour = self._selectionner_agent_shift(
+    #         agents_tries, 'jour', jour, equipe='CRSS', poste='agent'
+    #     )
+    #     if agent_crss_jour:
+    #         self._creer_affectation(planning, agent_crss_jour, jour, 'jour', 'CRSS', 'agent')
+    #         agents_tries.remove(agent_crss_jour)
+        
+    #     # Agent CRSS NUIT
+    #     agent_crss_nuit = self._selectionner_agent_shift(
+    #         agents_tries, 'nuit', jour, equipe='CRSS', poste='agent'
+    #     )
+    #     if agent_crss_nuit:
+    #         self._creer_affectation(planning, agent_crss_nuit, jour, 'nuit', 'CRSS', 'agent')
+    #         agents_tries.remove(agent_crss_nuit)
+        
+    #     # ========== BRIGADE PORTUAIRE (BVP) ==========
+        
+    #     # Chef d'Ã©quipe BVP (JOUR) - Contrainte 4 & 5 appliquÃ©es
+    #     chef = self._selectionner_chef_equipe_bvp(agents_tries, planning)
+    #     if not chef:
+    #         # Si aucun chef d'Ã©quipe BVP disponible, prendre un agent normal pour le jour
+    #         chef = self._selectionner_agent_shift(agents_tries, 'jour', jour, equipe='BVP', poste='chef')
+        
+    #     if chef:
+    #         self._creer_affectation(planning, chef, jour, 'jour', 'BVP', 'chef')
+    #         agents_tries.remove(chef)
+        
+    #     # Inspecteur BVP (JOUR)
+    #     inspecteur = self._selectionner_agent_shift(
+    #         agents_tries, 'jour', jour, equipe='BVP', poste='inspecteur'
+    #     )
+    #     if inspecteur:
+    #         self._creer_affectation(planning, inspecteur, jour, 'jour', 'BVP', 'inspecteur')
+    #         agents_tries.remove(inspecteur)
+        
+    #     # 2 Agents BVP JOUR
+    #     for i in range(2):
+    #         if agents_tries:
+    #             agent = self._selectionner_agent_shift(
+    #                 agents_tries, 'jour', jour, equipe='BVP', poste='agent'
+    #             )
+    #             if agent:
+    #                 self._creer_affectation(planning, agent, jour, 'jour', 'BVP', 'agent')
+    #                 agents_tries.remove(agent)
+        
+    #     # 1 Agent BVP NUIT
+    #     if agents_tries:
+    #         agent_nuit = self._selectionner_agent_shift(
+    #             agents_tries, 'nuit', jour, equipe='BVP', poste='agent'
+    #         )
+    #         if agent_nuit:
+    #             self._creer_affectation(planning, agent_nuit, jour, 'nuit', 'BVP', 'agent')
+    
     def _generer_affectations_jour(self, planning, jour):
-        """
-        GÃ©nÃ¨re les affectations pour un jour donnÃ© EN RESPECTANT TOUTES LES CONTRAINTES
+        """Génère TOUTES les affectations pour un jour selon le planning Excel"""
         
-        Args:
-            planning: L'objet Planning
-            jour: La date du jour
-        """
-        # RÃ©cupÃ©rer tous les agents disponibles
-        agents_disponibles = User.query.filter_by(
-            role='agent',
-            disponibilite=True
-        ).all()
+        agents_dispo = User.query.filter_by(role='agent', disponibilite=True).all()
+        agents_utilises = []
         
-        if len(agents_disponibles) < 6:
-            raise Exception(f"Pas assez d'agents disponibles ({len(agents_disponibles)}/6 requis)")
+        jour_semaine = jour.weekday()  # 0=Lundi, 6=Dimanche
         
-        # Trier les agents selon les rÃ¨gles de rotation
-        agents_tries = self._trier_agents_rotation(agents_disponibles, jour)
-        
-        # ========== VEILLE CRSS (1 jour + 1 nuit) ==========
-        
-        # Agent CRSS JOUR
-        agent_crss_jour = self._selectionner_agent_shift(
-            agents_tries, 'jour', jour, equipe='CRSS', poste='agent'
+        # 1. VEILLE CRSS (1 jour + 1 nuit)
+        agent_crss_jour = self._selectionner_pour_activite(
+            agents_dispo, agents_utilises, 'VEILLE_CRSS', 'jour', jour,
+            filtre=lambda a: a.est_operateur_veille_crss or a.crss
         )
         if agent_crss_jour:
-            self._creer_affectation(planning, agent_crss_jour, jour, 'jour', 'CRSS', 'agent')
-            agents_tries.remove(agent_crss_jour)
+            self._creer_affectation_v2(planning, agent_crss_jour, jour, 'jour', 'VEILLE_CRSS', 'Journée: 08h-17h')
+            agents_utilises.append(agent_crss_jour.id)
         
-        # Agent CRSS NUIT
-        agent_crss_nuit = self._selectionner_agent_shift(
-            agents_tries, 'nuit', jour, equipe='CRSS', poste='agent'
+        agent_crss_nuit = self._selectionner_pour_activite(
+            agents_dispo, agents_utilises, 'VEILLE_CRSS', 'nuit', jour,
+            filtre=lambda a: a.est_operateur_veille_crss or a.crss
         )
         if agent_crss_nuit:
-            self._creer_affectation(planning, agent_crss_nuit, jour, 'nuit', 'CRSS', 'agent')
-            agents_tries.remove(agent_crss_nuit)
+            self._creer_affectation_v2(planning, agent_crss_nuit, jour, 'nuit', 'VEILLE_CRSS', 'Nuit: 17h-08h')
+            agents_utilises.append(agent_crss_nuit.id)
         
-        # ========== BRIGADE PORTUAIRE (BVP) ==========
-        
-        # Chef d'Ã©quipe BVP (JOUR) - Contrainte 4 & 5 appliquÃ©es
-        chef = self._selectionner_chef_equipe_bvp(agents_tries, planning)
-        if not chef:
-            # Si aucun chef d'Ã©quipe BVP disponible, prendre un agent normal pour le jour
-            chef = self._selectionner_agent_shift(agents_tries, 'jour', jour, equipe='BVP', poste='chef')
-        
-        if chef:
-            self._creer_affectation(planning, chef, jour, 'jour', 'BVP', 'chef')
-            agents_tries.remove(chef)
-        
-        # Inspecteur BVP (JOUR)
-        inspecteur = self._selectionner_agent_shift(
-            agents_tries, 'jour', jour, equipe='BVP', poste='inspecteur'
+        # 2. BRIGADE VEILLE PORTUAIRE (3 agents jour)
+        chef_bvp = self._selectionner_pour_activite(
+            agents_dispo, agents_utilises, 'BVP', 'jour', jour,
+            filtre=lambda a: a.est_chef_equipe_bvp and self._peut_etre_chef_equipe_bvp(a, planning)
         )
-        if inspecteur:
-            self._creer_affectation(planning, inspecteur, jour, 'jour', 'BVP', 'inspecteur')
-            agents_tries.remove(inspecteur)
+        if chef_bvp:
+            self._creer_affectation_v2(planning, chef_bvp, jour, 'jour', 'BVP', "Chef d'équipe")
+            agents_utilises.append(chef_bvp.id)
         
-        # 2 Agents BVP JOUR
-        for i in range(2):
-            if agents_tries:
-                agent = self._selectionner_agent_shift(
-                    agents_tries, 'jour', jour, equipe='BVP', poste='agent'
-                )
-                if agent:
-                    self._creer_affectation(planning, agent, jour, 'jour', 'BVP', 'agent')
-                    agents_tries.remove(agent)
+        inspecteur_bvp = self._selectionner_pour_activite(
+            agents_dispo, agents_utilises, 'BVP', 'jour', jour,
+            filtre=lambda a: a.bvp
+        )
+        if inspecteur_bvp:
+            self._creer_affectation_v2(planning, inspecteur_bvp, jour, 'jour', 'BVP', 'Inspecteur de Veille')
+            agents_utilises.append(inspecteur_bvp.id)
         
-        # 1 Agent BVP NUIT
-        if agents_tries:
-            agent_nuit = self._selectionner_agent_shift(
-                agents_tries, 'nuit', jour, equipe='BVP', poste='agent'
+        # IMPORTANT: Birama DIOP doit toujours être dans cette section
+        birama = User.query.filter_by(nom="DIOP", prenom="Birama").first()
+        if birama and birama.id not in agents_utilises:
+            self._creer_affectation_v2(planning, birama, jour, 'jour', 'BVP', 'Autres agents')
+            agents_utilises.append(birama.id)
+        
+        # Autre agent BVP (si on a encore besoin)
+        autre_bvp = self._selectionner_pour_activite(
+            agents_dispo, agents_utilises, 'BVP', 'jour', jour,
+            filtre=lambda a: a.bvp and a.id != (birama.id if birama else None)
+        )
+        
+        # autre_bvp = self._selectionner_pour_activite(
+        #     agents_dispo, agents_utilises, 'BVP', 'jour', jour,
+        #     filtre=lambda a: a.bvp
+        # )
+        if autre_bvp:
+            self._creer_affectation_v2(planning, autre_bvp, jour, 'jour', 'BVP', 'Autres agents')
+            agents_utilises.append(autre_bvp.id)
+        
+        # 3. CHAUFFEURS (2 agents, dont Birama DIOP tous les jours)
+        # birama = User.query.filter_by(nom="DIOP", prenom="Birama").first()
+        # if birama and birama.id not in agents_utilises:
+        #     self._creer_affectation_v2(planning, birama, jour, 'jour', 'CHAUFFEUR', 'Chauffeur principal')
+        #     agents_utilises.append(birama.id)
+        
+        autre_chauffeur = self._selectionner_pour_activite(
+            agents_dispo, agents_utilises, 'CHAUFFEUR', 'jour', jour,
+            filtre=lambda a: a.est_chauffeur
+        )
+        if autre_chauffeur:
+            self._creer_affectation_v2(planning, autre_chauffeur, jour, 'jour', 'CHAUFFEUR', 'Chauffeur')
+            agents_utilises.append(autre_chauffeur.id)
+        
+        # 4. REPOS CHAUFFEURS (seulement lundi-vendredi)
+        if jour_semaine < 5:  # Lundi à Vendredi
+            repos = self._selectionner_pour_activite(
+                agents_dispo, agents_utilises, 'REPOS_CHAUFFEUR', 'jour', jour,
+                filtre=lambda a: a.est_chauffeur
             )
-            if agent_nuit:
-                self._creer_affectation(planning, agent_nuit, jour, 'nuit', 'BVP', 'agent')
-    
+            if repos:
+                self._creer_affectation_v2(planning, repos, jour, 'jour', 'REPOS_CHAUFFEUR', 'Repos')
+                # Ne pas ajouter aux agents_utilises car c'est un repos
+        
+        # 5. CERTIFICATION CAPTURE DIRECTION (3 agents, lundi-vendredi)
+        if jour_semaine < 5:
+            for i in range(3):
+                agent_cert = self._selectionner_pour_activite(
+                    agents_dispo, agents_utilises, 'CERTIFICATION_DIRECTION', 'jour', jour,
+                    filtre=lambda a: a.aeroport
+                )
+                if agent_cert:
+                    self._creer_affectation_v2(planning, agent_cert, jour, 'jour', 'CERTIFICATION_DIRECTION', f'Agent {i+1}')
+                    agents_utilises.append(agent_cert.id)
+        
+        # 6. CERTIFICATION CAPTURE AEROPORT (1 agent)
+        agent_aero = self._selectionner_pour_activite(
+            agents_dispo, agents_utilises, 'CERTIFICATION_AEROPORT', 'jour', jour,
+            filtre=lambda a: a.est_certification_aeroport or a.aeroport
+        )
+        if agent_aero:
+            self._creer_affectation_v2(planning, agent_aero, jour, 'jour', 'CERTIFICATION_AEROPORT', 'Agent')
+            agents_utilises.append(agent_aero.id)
+        
+        # 7. PATROUILLE MARITIME COTIERE (certains jours: mercredi, vendredi)
+        if jour_semaine in [2, 4]:  # Mercredi, Vendredi
+            patrol = self._selectionner_pour_activite(
+                agents_dispo, agents_utilises, 'PATROUILLE_COTIERE', 'jour', jour,
+                filtre=lambda a: a.patrouille_cotiere
+            )
+            if patrol:
+                self._creer_affectation_v2(planning, patrol, jour, 'jour', 'PATROUILLE_COTIERE', 'Inspecteur')
+                agents_utilises.append(patrol.id)
+        
+        # 8. GARDIENNAGE (1 agent tous les jours)
+        gardien = self._selectionner_pour_activite(
+            agents_dispo, agents_utilises, 'GARDIENNAGE', 'jour', jour,
+            filtre=lambda a: a.gardiennage
+        )
+        if gardien:
+            self._creer_affectation_v2(planning, gardien, jour, 'jour', 'GARDIENNAGE', 'Agent')
+            agents_utilises.append(gardien.id)
+        
+        # 9. COURRIER (chauffeurs, lundi-vendredi)
+        if jour_semaine < 5:
+            courrier_chauff = self._selectionner_pour_activite(
+                agents_dispo, agents_utilises, 'COURRIER', 'jour', jour,
+                filtre=lambda a: a.est_chauffeur and a.courrier
+            )
+            if courrier_chauff:
+                self._creer_affectation_v2(planning, courrier_chauff, jour, 'jour', 'COURRIER', 'Chauffeur')
+                # Ne pas ajouter car peut être déjà affecté comme chauffeur
+        
+        # 10. INSPECTION USINES (lundi, mercredi, vendredi: 2 inspecteurs + 1 chauffeur)
+        if jour_semaine in [0, 2, 4]:  # Lundi, Mercredi, Vendredi
+            for i in range(2):
+                insp = self._selectionner_pour_activite(
+                    agents_dispo, agents_utilises, 'INSPECTION_USINE', 'jour', jour,
+                    filtre=lambda a: a.inspection_usine or a.est_chef_equipe_usine
+                )
+                if insp:
+                    self._creer_affectation_v2(planning, insp, jour, 'jour', 'INSPECTION_USINE', f'Inspecteur {i+1}')
+                    agents_utilises.append(insp.id)
+            
+            chauff_usine = self._selectionner_pour_activite(
+                agents_dispo, agents_utilises, 'INSPECTION_USINE', 'jour', jour,
+                filtre=lambda a: a.est_chauffeur
+            )
+            if chauff_usine:
+                self._creer_affectation_v2(planning, chauff_usine, jour, 'jour', 'INSPECTION_USINE', 'Chauffeur')
+                # Ne pas ajouter car peut être déjà affecté
+
     def _trier_agents_rotation(self, agents, jour):
         """
         Trie les agents selon les rÃ¨gles de rotation Ã©quitable
@@ -398,15 +542,76 @@ class PlanningScheduler:
         
         db.session.add(agent)
     
+    def _creer_affectation_v2(self, planning, agent, jour, shift, activite, sous_activite):
+        """Nouvelle version de création d'affectation avec activités"""
+        affectation = Affectation(
+            planning_id=planning.id,
+            agent_id=agent.id,
+            jour=jour,
+            shift=shift,
+            activite=activite,  # Nouveau champ
+            sous_activite=sous_activite,  # Nouveau champ
+            poste=sous_activite  # Garder pour compatibilité
+        )
+        db.session.add(affectation)
+        
+        if shift == 'jour':
+            agent.compteur_jour += 1
+        else:
+            agent.compteur_nuit += 1
+        agent.dernier_shift = shift
+        agent.derniere_affectation = jour
+        db.session.add(agent)
+
+    def _selectionner_pour_activite(self, agents_dispo, agents_utilises, activite, shift, jour, filtre=None):
+        """Sélectionne un agent pour une activité en respectant les contraintes"""
+        candidats = []
+        
+        for agent in agents_dispo:
+            # Vérifier si déjà utilisé
+            if agent.id in agents_utilises:
+                continue
+            
+            # Appliquer le filtre spécifique
+            if filtre and not filtre(agent):
+                continue
+            
+            # Vérifier contraintes générales
+            if shift == 'nuit' and agent.genre == 'femme':
+                continue
+            
+            if shift == 'nuit' and (agent.est_chef_bureau or agent.est_chef_equipe_bvp):
+                continue
+            
+            # Vérifier si déjà affecté aujourd'hui
+            deja_affecte = Affectation.query.filter_by(
+                agent_id=agent.id,
+                jour=jour
+            ).first()
+            
+            # Autoriser double affectation pour chauffeurs (courrier + chauffeur)
+            if deja_affecte and activite not in ['COURRIER', 'CHAUFFEUR']:
+                continue
+            
+            candidats.append(agent)
+        
+        # Retourner le premier candidat (déjà trié par rotation)
+        if candidats:
+            # Trier par compteur (rotation équitable)
+            candidats.sort(key=lambda a: a.compteur_jour + a.compteur_nuit)
+            return candidats[0]
+        
+        return None
+
     def _envoyer_notifications(self, planning):
         """
-        Envoie les notifications par email Ã  tous les agents affectÃ©s
+        Envoie les notifications par email à tous les agents affectés
         
         Args:
             planning: L'objet Planning
         """
         if not self.mail:
-            print("Service email non configurÃ©, notifications non envoyÃ©es")
+            print("Service email non configuré, notifications non envoyées")
             return
         
         # RÃ©cupÃ©rer tous les agents affectÃ©s pour ce planning

@@ -19,12 +19,11 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
             <p class="text-sm text-gray-600">Total agents</p>
-            <p class="text-2xl font-bold text-gray-800">{{ all_agents|length }}</p>
+            <p class="text-2xl font-bold text-gray-800">{{ agents|length }}</p>
         </div>
         <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
             <p class="text-sm text-gray-600">Disponibles</p>
-            <p class="text-2xl font-bold text-gray-800">{{ agents|selectattr('disponibilite', 'equalto',
-                True)|list|length }}</p>
+            <p class="text-2xl font-bold text-gray-800">{{ agents|selectattr('disponibilite', 'equalto', True)|list|length }}</p>
         </div>
         <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
             <p class="text-sm text-gray-600">En service jour</p>
@@ -33,6 +32,74 @@
         <div class="bg-white rounded-lg shadow p-4 border-l-4 border-indigo-500">
             <p class="text-sm text-gray-600">En service nuit</p>
             <p class="text-2xl font-bold text-gray-800">{{ agents|sum(attribute='compteur_nuit') }}</p>
+        </div>
+    </div>
+
+    <!-- Zone de recherche et filtres -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-search mr-2"></i>Rechercher et filtrer
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Barre de recherche -->
+            <div class="md:col-span-2">
+                <label for="searchInput" class="block text-sm font-medium text-gray-700 mb-2">
+                    Recherche globale
+                </label>
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Nom, prénom, fonction..."
+                        class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        autocomplete="off"
+                    >
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+
+            <!-- Filtre par genre -->
+            <div>
+                <label for="genreFilter" class="block text-sm font-medium text-gray-700 mb-2">
+                    Genre
+                </label>
+                <select 
+                    id="genreFilter" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                    <option value="">Tous</option>
+                    <option value="homme">Homme</option>
+                    <option value="femme">Femme</option>
+                </select>
+            </div>
+
+            <!-- Filtre par disponibilité -->
+            <div>
+                <label for="dispoFilter" class="block text-sm font-medium text-gray-700 mb-2">
+                    Disponibilité
+                </label>
+                <select 
+                    id="dispoFilter" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                    <option value="">Tous</option>
+                    <option value="true">Disponible</option>
+                    <option value="false">Indisponible</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Bouton reset et compteur -->
+        <div class="mt-4 flex items-center justify-between">
+            <button 
+                id="resetFilters" 
+                class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+            >
+                <i class="fas fa-redo mr-2"></i>Réinitialiser
+            </button>
+            <p class="text-sm text-gray-600">
+                <span id="resultsCount" class="font-semibold text-blue-600">{{ agents|length }}</span> agent(s) affiché(s)
+            </p>
         </div>
     </div>
 
@@ -66,38 +133,40 @@
                         </th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody id="agentsTableBody" class="bg-white divide-y divide-gray-200">
                     {% for agent in agents %}
-                    <tr class="hover:bg-gray-50 transition">
+                    <tr class="agent-row hover:bg-gray-50 transition"
+                        data-nom="{{ agent.nom|lower }}" 
+                        data-prenom="{{ agent.prenom|lower }}"
+                        data-fonction="{{ agent.fonction|lower if agent.fonction else '' }}"
+                        data-genre="{{ agent.genre|lower if agent.genre else '' }}"
+                        data-disponibilite="{{ 'true' if agent.disponibilite else 'false' }}">
+                        
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-10 w-10">
                                     <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <span class="text-blue-600 font-bold text-sm">{{ agent.prenom[0] }}{{
-                                            agent.nom[0] }}</span>
+                                        <span class="text-blue-600 font-bold text-sm">{{ agent.prenom[0] }}{{ agent.nom[0] }}</span>
                                     </div>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">{{ agent.prenom }} {{ agent.nom }}
-                                    </div>
+                                    <div class="text-sm font-medium text-gray-900">{{ agent.prenom }} {{ agent.nom }}</div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ agent.genre }}</div>
+                            <div class="text-sm text-gray-900">{{ agent.genre if agent.genre else 'N/A' }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">{{ agent.fonction or 'N/A' }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% if agent.disponibilite %}
-                            <span
-                                class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                 <i class="fas fa-check-circle mr-1"></i> Disponible
                             </span>
                             {% else %}
-                            <span
-                                class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                                 <i class="fas fa-times-circle mr-1"></i> Indisponible
                             </span>
                             {% endif %}
@@ -116,8 +185,7 @@
                             {% if agent.dernier_shift %}
                             <span class="text-sm text-gray-600">{{ agent.dernier_shift.capitalize() }}</span>
                             {% if agent.derniere_affectation %}
-                            <br><span class="text-xs text-gray-400">{{ agent.derniere_affectation.strftime('%d/%m/%Y')
-                                }}</span>
+                            <br><span class="text-xs text-gray-400">{{ agent.derniere_affectation.strftime('%d/%m/%Y') }}</span>
                             {% endif %}
                             {% else %}
                             <span class="text-sm text-gray-400">Aucun</span>
@@ -141,41 +209,13 @@
                 </tbody>
             </table>
         </div>
-        {% if pagination.pages > 1 %}
-        <div class="bg-white px-6 py-4 flex justify-center items-center space-x-2 border-t border-gray-200">
-            <!-- Bouton précédent -->
-            {% if pagination.has_prev %}
-            <a href="{{ url_for('gestion_agents', page=pagination.prev_num) }}"
-                class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
-                &laquo; Précédent
-            </a>
-            {% else %}
-            <span class="px-4 py-2 bg-gray-100 text-gray-400 rounded cursor-not-allowed">&laquo; Précédent</span>
-            {% endif %}
 
-            <!-- Numéros de pages -->
-            {% for p in range(1, pagination.pages + 1) %}
-            {% if p == pagination.page %}
-            <span class="px-4 py-2 bg-blue-600 text-white rounded font-semibold">{{ p }}</span>
-            {% else %}
-            <a href="{{ url_for('gestion_agents', page=p) }}"
-                class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
-                {{ p }}
-            </a>
-            {% endif %}
-            {% endfor %}
-
-            <!-- Bouton suivant -->
-            {% if pagination.has_next %}
-            <a href="{{ url_for('gestion_agents', page=pagination.next_num) }}"
-                class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
-                Suivant &raquo;
-            </a>
-            {% else %}
-            <span class="px-4 py-2 bg-gray-100 text-gray-400 rounded cursor-not-allowed">Suivant &raquo;</span>
-            {% endif %}
+        <!-- Message si aucun résultat trouvé -->
+        <div id="noResults" class="hidden text-center py-12">
+            <i class="fas fa-search text-gray-300 text-6xl mb-4"></i>
+            <p class="text-gray-500 text-lg">Aucun agent trouvé</p>
+            <p class="text-gray-400 text-sm mt-2">Essayez de modifier vos critères de recherche</p>
         </div>
-        {% endif %}
 
         {% else %}
         <div class="text-center py-12">
@@ -189,4 +229,99 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+// Fonction de recherche et filtrage en temps réel
+function filterAgents() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    const genreFilter = document.getElementById('genreFilter').value.toLowerCase();
+    const dispoFilter = document.getElementById('dispoFilter').value;
+    
+    const rows = document.querySelectorAll('.agent-row');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const nom = row.dataset.nom || '';
+        const prenom = row.dataset.prenom || '';
+        const fonction = row.dataset.fonction || '';
+        const genre = row.dataset.genre || '';
+        const disponibilite = row.dataset.disponibilite || '';
+        
+        // Recherche textuelle (nom, prénom, fonction)
+        const matchesSearch = searchTerm === '' || 
+            nom.includes(searchTerm) || 
+            prenom.includes(searchTerm) || 
+            fonction.includes(searchTerm) ||
+            (nom + ' ' + prenom).includes(searchTerm) ||
+            (prenom + ' ' + nom).includes(searchTerm);
+        
+        // Filtre genre
+        const matchesGenre = genreFilter === '' || genre === genreFilter;
+        
+        // Filtre disponibilité
+        const matchesDispo = dispoFilter === '' || disponibilite === dispoFilter;
+        
+        // Afficher ou cacher la ligne
+        if (matchesSearch && matchesGenre && matchesDispo) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Mettre à jour le compteur
+    document.getElementById('resultsCount').textContent = visibleCount;
+    
+    // Afficher/masquer le message "Aucun résultat"
+    const tableBody = document.getElementById('agentsTableBody');
+    const noResults = document.getElementById('noResults');
+    
+    if (visibleCount === 0 && rows.length > 0) {
+        noResults.classList.remove('hidden');
+    } else {
+        noResults.classList.add('hidden');
+    }
+}
+
+// Event listeners pour la recherche et les filtres
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const genreFilter = document.getElementById('genreFilter');
+    const dispoFilter = document.getElementById('dispoFilter');
+    const resetButton = document.getElementById('resetFilters');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', filterAgents);
+        searchInput.addEventListener('keyup', filterAgents);
+    }
+    
+    if (genreFilter) {
+        genreFilter.addEventListener('change', filterAgents);
+    }
+    
+    if (dispoFilter) {
+        dispoFilter.addEventListener('change', filterAgents);
+    }
+    
+    // Bouton reset
+    if (resetButton) {
+        resetButton.addEventListener('click', function() {
+            searchInput.value = '';
+            genreFilter.value = '';
+            dispoFilter.value = '';
+            filterAgents();
+        });
+    }
+    
+    // Raccourci clavier Ctrl+K pour focus recherche
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+        }
+    });
+});
+</script>
 {% endblock %}

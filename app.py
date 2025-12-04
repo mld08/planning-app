@@ -576,16 +576,13 @@ def register():
     if request.method == 'POST':
         nom = request.form.get('nom')
         prenom = request.form.get('prenom')
-        email = request.form.get('email')
         password = request.form.get('password')
         username = request.form.get('username')
         phone = request.form.get('phone')
-        fonction = request.form.get('fonction')
-        chef_de_mission = request.form.get('chef_de_mission')
         role = request.form.get('role', 'agent')
         
-        if User.query.filter_by(email=email).first():
-            flash('Cet email est déjà utilisé.', 'danger')
+        if User.query.filter_by(username=username).first():
+            flash('Cet username est déjà utilisé.', 'danger')
         elif username and User.query.filter_by(username=username).first():
             flash('Ce nom d\'utilisateur est déjà utilisé.', 'danger')
         else:
@@ -595,11 +592,8 @@ def register():
             user = User(
                 nom=nom,
                 prenom=prenom,
-                email=email,
                 username=username,
                 phone=phone,
-                fonction=fonction,
-                chef_de_mission=chef_de_mission,
                 role=role
             )
             user.set_password(password)
@@ -700,7 +694,7 @@ def gestion_agents():
     
     # Récupère le numéro de page depuis l’URL (par défaut 1)
     page = request.args.get('page', 1, type=int)
-    per_page = 10  # nombre d'agents par page (modifiable)
+    per_page = 100  # nombre d'agents par page (modifiable)
     
     # Pagination
     pagination = User.query.filter_by(role='agent').paginate(page=page, per_page=per_page)
@@ -722,32 +716,33 @@ def ajouter_agent():
         nom = request.form.get('nom')
         prenom = request.form.get('prenom')
         username = request.form.get('username') or None
-        email = request.form.get('email') or ''
         phone = request.form.get('phone') or ''
         password = request.form.get('password') or 'defaultpassword'
         fonction = request.form.get('fonction')
-        chef_de_mission = request.form.get('chef_de_mission') or ''
         
         # ========== NOUVEAUX CHAMPS POUR LES CONTRAINTES ==========
         genre = request.form.get('genre')
-        est_chef_equipe = request.form.get('est_chef_equipe') == 'on'
         est_chef_bureau = request.form.get('est_chef_bureau') == 'on'
         est_certification_aeroport = request.form.get('est_certification_aeroport') == 'on'
         est_chef_equipe_bvp = request.form.get('est_chef_equipe_bvp') == 'on'
         est_chef_equipe_usine = request.form.get('est_chef_equipe_usine') == 'on'
-        est_observateur_embarque = request.form.get('est_observateur_embarque') == 'on'
         est_chauffeur = request.form.get('est_chauffeur') == 'on'
+        est_absent = request.form.get('est_absent') == 'on'
         est_operateur_veille_crss = request.form.get('est_operateur_veille_crss') == 'on'
         date_embarquement = None
         date_debarquement_prevue = None
-        if est_observateur_embarque:
-            date_emb_str = request.form.get('date_embarquement')
-            date_deb_str = request.form.get('date_debarquement_prevue')
-            if date_emb_str:
-                from datetime import datetime as dt
-                date_embarquement = dt.strptime(date_emb_str, '%Y-%m-%d').date()
-            if date_deb_str:
-                date_debarquement_prevue = dt.strptime(date_deb_str, '%Y-%m-%d').date()
+        aeroport = request.form.get('aeroport') == 'on'
+        patrouille_cotiere = request.form.get('patrouille_cotiere') == 'on'
+        inspection_usine = request.form.get('inspection_usine') == 'on'
+        patrouille_aerienne = request.form.get('patrouille_aerienne') == 'on'
+        gardiennage = request.form.get('gardiennage') == 'on'
+        courrier = request.form.get('courrier') == 'on'
+        missions = request.form.get('missions') == 'on'
+        crss = request.form.get('crss') == 'on'
+        bvp = request.form.get('bvp') == 'on'
+        certification_dpsp = request.form.get('certification_dpsp') == 'on'
+        certification = request.form.get('certification') == 'on'
+
         # ===========================================================
 
         if username and User.query.filter_by(username=username).first():
@@ -756,24 +751,32 @@ def ajouter_agent():
             agent = User(
                 nom=nom,
                 prenom=prenom,
-                email=email,
                 username=username,
                 phone=phone,
                 fonction=fonction,
-                chef_de_mission=chef_de_mission,
                 role='agent',
                 # Nouveaux champs contraintes
                 genre=genre,
-                est_chef_equipe=est_chef_equipe,
                 est_chef_bureau=est_chef_bureau,
                 est_certification_aeroport=est_certification_aeroport,
                 est_chef_equipe_bvp=est_chef_equipe_bvp,
                 est_chef_equipe_usine=est_chef_equipe_usine,
-                est_observateur_embarque=est_observateur_embarque,
                 est_chauffeur=est_chauffeur,
+                est_absent=est_absent,
                 est_operateur_veille_crss=est_operateur_veille_crss,
                 date_embarquement=date_embarquement,
-                date_debarquement_prevue=date_debarquement_prevue
+                date_debarquement_prevue=date_debarquement_prevue,
+                #aeroport=aeroport,
+                patrouille_cotiere=patrouille_cotiere,
+                inspection_usine=inspection_usine,
+                patrouille_aerienne=patrouille_aerienne,
+                gardiennage=gardiennage,
+                courrier=courrier,
+                missions=missions,
+                crss=crss,
+                bvp=bvp,
+                certification_dpsp=certification_dpsp,
+                certification=certification
             )
             agent.set_password(password)
             
@@ -801,13 +804,13 @@ def modifier_agent(agent_id):
         agent.prenom = request.form.get('prenom')
         agent.username = request.form.get('username') or None
         agent.phone = request.form.get('phone') or ''
-        agent.email = request.form.get('email') or ''
         agent.fonction = request.form.get('fonction') 
         agent.chef_de_mission = request.form.get('chef_de_mission')
         agent.disponibilite = request.form.get('disponibilite') == 'on'
         
         # ========== NOUVEAUX CHAMPS CONTRAINTES ==========
         agent.genre = request.form.get('genre')
+        agent.est_absent = request.form.get('est_absent') == 'on'
         agent.est_chef_equipe = request.form.get('est_chef_equipe') == 'on'
         agent.est_chef_bureau = request.form.get('est_chef_bureau') == 'on'
         agent.est_certification_aeroport = request.form.get('est_certification_aeroport') == 'on'
@@ -816,18 +819,17 @@ def modifier_agent(agent_id):
         agent.est_observateur_embarque = request.form.get('est_observateur_embarque') == 'on'
         agent.est_chauffeur = request.form.get('est_chauffeur') == 'on'
         agent.est_operateur_veille_crss = request.form.get('est_operateur_veille_crss') == 'on'
-        
-        if agent.est_observateur_embarque:
-            date_emb_str = request.form.get('date_embarquement')
-            date_deb_str = request.form.get('date_debarquement_prevue')
-            if date_emb_str:
-                from datetime import datetime as dt
-                agent.date_embarquement = dt.strptime(date_emb_str, '%Y-%m-%d').date()
-            if date_deb_str:
-                agent.date_debarquement_prevue = dt.strptime(date_deb_str, '%Y-%m-%d').date()
-        else:
-            agent.date_embarquement = None
-            agent.date_debarquement_prevue = None
+        #agent.aeroport = request.form.get('aeroport') == 'on'
+        agent.patrouille_cotiere = request.form.get('patrouille_cotiere') == 'on'
+        agent.inspection_usine = request.form.get('inspection_usine') == 'on'
+        agent.patrouille_aerienne = request.form.get('patrouille_aerienne') == 'on'
+        agent.gardiennage = request.form.get('gardiennage') == 'on'
+        agent.courrier = request.form.get('courrier') == 'on'
+        agent.missions = request.form.get('missions') == 'on'
+        agent.crss = request.form.get('crss') == 'on'
+        agent.bvp = request.form.get('bvp') == 'on'
+        agent.certification_dpsp = request.form.get('certification_dpsp') == 'on'
+        agent.certification = request.form.get('certification') == 'on'
         # =================================================
         
         password = request.form.get('password')
@@ -876,28 +878,70 @@ def liste_plannings():
 @app.route('/admin/plannings/<int:planning_id>')
 @login_required
 def voir_planning(planning_id):
-    """Voir un planning détaillé"""
+    """Affiche les détails d'un planning avec toutes les activités"""
     planning = Planning.query.get_or_404(planning_id)
     
-    affectations_par_jour = {}
+    # Récupérer toutes les affectations
+    affectations = Affectation.query.filter_by(planning_id=planning.id).order_by(Affectation.jour, Affectation.shift).all()
+    
+    # Organiser par jour
     jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+    affectations_par_jour = {}
     
     for i in range(7):
-        jour = planning.date_debut + timedelta(days=i)
-        affectations_jour = Affectation.query.filter_by(
-            planning_id=planning.id,
-            jour=jour
-        ).all()
+        jour_date = planning.date_debut + timedelta(days=i)
+        nom_jour = jours_semaine[i]
         
-        affectations_par_jour[jours_semaine[i]] = {
-            'date': jour,
-            'affectations': affectations_jour
+        jour_affectations = [aff for aff in affectations if aff.jour == jour_date]
+        
+        affectations_par_jour[nom_jour] = {
+            'date': jour_date,
+            'affectations': jour_affectations
         }
     
-    return render_template('voir_planning.html', 
+    # Organiser par activités pour l'affichage
+    activites_ordre = [
+        ('VEILLE_CRSS', 'I - VEILLE CRSS', 'yellow'),
+        ('BVP', 'II - BRIGADE DE VEILLE PORTUAIRE', 'orange'),
+        ('CHAUFFEUR', 'Chauffeurs BVP', 'yellow'),
+        ('REPOS_CHAUFFEUR', 'III - REPOS CHAUFFEURS', 'green'),
+        ('CERTIFICATION_DIRECTION', 'IV - CERTIFICATION CAPTURE - DIRECTION', 'blue'),
+        ('CERTIFICATION_AEROPORT', 'V - CERTIFICATION CAPTURE - AEROPORT', 'teal'),
+        ('PATROUILLE_COTIERE', 'VI - PATROUILLE MARITIME COTIERE', 'indigo'),
+        ('GARDIENNAGE', 'VII - GARDIENNAGE', 'purple'),
+        ('COURRIER', 'VIII - COURRIER', 'pink'),
+        ('INSPECTION_USINE', 'IX - INSPECTION USINES', 'green'),
+        ('PATROUILLE_AERIENNE', 'X - PATROUILLE AERIENNE', 'blue'),
+    ]
+    
+    return render_template('voir_planning.html',
                          planning=planning,
                          affectations_par_jour=affectations_par_jour,
-                         jours_semaine=jours_semaine)
+                         jours_semaine=jours_semaine,
+                         activites_ordre=activites_ordre)
+# def voir_planning(planning_id):
+#     """Voir un planning détaillé"""
+#     planning = Planning.query.get_or_404(planning_id)
+    
+#     affectations_par_jour = {}
+#     jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+    
+#     for i in range(7):
+#         jour = planning.date_debut + timedelta(days=i)
+#         affectations_jour = Affectation.query.filter_by(
+#             planning_id=planning.id,
+#             jour=jour
+#         ).all()
+        
+#         affectations_par_jour[jours_semaine[i]] = {
+#             'date': jour,
+#             'affectations': affectations_jour
+#         }
+    
+#     return render_template('voir_planning.html', 
+#                          planning=planning,
+#                          affectations_par_jour=affectations_par_jour,
+#                          jours_semaine=jours_semaine)
 
 
 @app.route('/admin/plannings/generer', methods=['POST'])
@@ -914,8 +958,8 @@ def generer_planning():
         flash(f'Planning genere pour la semaine du {planning.date_debut.strftime("%d/%m/%Y")}!', 'success')
         return redirect(url_for('voir_planning', planning_id=planning.id))
     except Exception as e:
-        flash(f'Erreur lors de la génération du planning: {str(e)}', 'danger')
-        return redirect(url_for('dashboard_admin'))
+        print(f'Erreur lors de la génération du planning: {str(e)}', 'danger')
+        return redirect(url_for('liste_plannings'))
 
 
 @app.route('/admin/plannings/<int:planning_id>/archiver', methods=['POST'])
@@ -976,12 +1020,12 @@ def export_planning_pdf(planning_id):
     style_center = ParagraphStyle(
         name='center', 
         alignment=TA_CENTER, 
-        fontSize=7,  # Réduit pour l'en-tête
+        fontSize=7,
         leading=9
     )
     style_title = ParagraphStyle(
         name='title',
-        fontSize=10,  # Réduit
+        fontSize=10,
         alignment=TA_CENTER,
         spaceAfter=4,
         fontName='Helvetica-Bold'
@@ -995,7 +1039,7 @@ def export_planning_pdf(planning_id):
         with open("static/img/dpsp.png", "rb") as f:
             logo_bytes = f.read()
             logo_img = Image(BytesIO(logo_bytes))
-            logo_img.drawHeight = 30  # Réduit de 40 à 30
+            logo_img.drawHeight = 30
             logo_img.drawWidth = 30
     except Exception:
         logo_img = None
@@ -1004,7 +1048,7 @@ def export_planning_pdf(planning_id):
         with open("static/img/senegal.jpg", "rb") as f:
             sig_bytes = f.read()
             sig_img = Image(BytesIO(sig_bytes))
-            sig_img.drawHeight = 18  # Réduit de 22 à 18
+            sig_img.drawHeight = 18
             sig_img.drawWidth = 18
     except Exception:
         sig_img = None
@@ -1081,8 +1125,8 @@ def export_planning_pdf(planning_id):
         dates_header.append(f"{jours_semaine[i]}\n{jour_date.strftime('%d/%m/%Y')}")
     
     data = [dates_header]
-    row_styles = []  # Pour stocker les styles spéciaux
-    current_row = 1  # Commence après l'en-tête
+    row_styles = []
+    current_row = 1
     
     # Fonction helper pour ajouter une ligne de section
     def ajouter_titre_section(titre, couleur_hex):
@@ -1095,8 +1139,8 @@ def export_planning_pdf(planning_id):
         })
         current_row += 1
     
-    # Fonction helper pour ajouter une ligne de poste
-    def ajouter_ligne_poste(label, filter_params, label_color_hex=None):
+    # Fonction helper pour ajouter une ligne de poste avec nouveaux champs
+    def ajouter_ligne_poste(label, activite, sous_activite_filter=None, shift_filter=None, label_color_hex=None):
         nonlocal current_row
         
         row_data = [label]
@@ -1105,20 +1149,28 @@ def export_planning_pdf(planning_id):
         for i in range(7):
             jour = planning.date_debut + timedelta(days=i)
             
-            # Chercher l'affectation
-            filters = {'planning_id': planning.id, 'jour': jour}
-            filters.update(filter_params)
+            # Chercher les affectations
+            query = Affectation.query.filter_by(
+                planning_id=planning.id,
+                jour=jour,
+                activite=activite
+            )
             
-            aff = Affectation.query.filter_by(**filters).first()
+            if shift_filter:
+                query = query.filter_by(shift=shift_filter)
             
-            if aff:
-                row_data.append(aff.agent.nom_complet)
-            else:
-                row_data.append('')
+            affs = query.all()
+            
+            # Filtrer par sous_activite si nécessaire
+            if sous_activite_filter and affs:
+                affs = [aff for aff in affs if aff.sous_activite and sous_activite_filter in aff.sous_activite]
+            
+            # Récupérer les noms
+            noms = [aff.agent.nom_complet for aff in affs]
+            row_data.append('\n'.join(noms) if noms else '')
         
         data.append(row_data)
         
-        # Stocker le style si nécessaire
         if label_color_hex:
             row_styles.append({
                 'row': current_row,
@@ -1130,37 +1182,39 @@ def export_planning_pdf(planning_id):
     
     # ========== SECTION I - VEILLE CRSS ==========
     ajouter_titre_section('I - VEILLE CRSS', '70AD47')
-    ajouter_ligne_poste('Journée:  08h - 17h', {'shift': 'jour', 'equipe': 'CRSS'}, 'FFFF00')
-    ajouter_ligne_poste('Nuit : 17h - 08h', {'shift': 'nuit', 'equipe': 'CRSS'}, '00B050')
+    ajouter_ligne_poste('Journée:  08h - 17h', 'VEILLE_CRSS', shift_filter='jour', label_color_hex='FFFF00')
+    ajouter_ligne_poste('Nuit : 17h - 08h', 'VEILLE_CRSS', shift_filter='nuit', label_color_hex='00B050')
     
     # ========== SECTION II - BRIGADE DE VEILLE PORTUAIRE ==========
     ajouter_titre_section('II - BRIGADE DE VEILLE PORTUAIRE', 'FFC000')
-    ajouter_ligne_poste('Chef d\'equipe', {'equipe': 'BVP', 'poste': 'chef'})
-    ajouter_ligne_poste('Inspecteur de Veille', {'equipe': 'BVP', 'poste': 'inspecteur'})
-    ajouter_ligne_poste('Autres agents', {'equipe': 'BVP', 'poste': 'agent'})
+    ajouter_ligne_poste("Chef d'equipe", 'BVP', sous_activite_filter='Chef')
+    ajouter_ligne_poste('Inspecteur de Veille', 'BVP', sous_activite_filter='Inspecteur')
+    ajouter_ligne_poste('Autres agents', 'BVP', sous_activite_filter='Autres')
     
     # Ligne vide
     data.append([''] * 8)
     current_row += 1
     
-    ajouter_ligne_poste('Chauffeurs', {'equipe': 'BVP', 'poste': 'chauffeur'}, 'FFFF00')
+    ajouter_ligne_poste('Chauffeurs', 'CHAUFFEUR', label_color_hex='FFFF00')
     
     # ========== SECTION III - REPOS CHAUFFEURS ==========
     ajouter_titre_section('III - REPOS CHAUFFEURS', '92D050')
-    ajouter_ligne_poste('Chauffeurs', {'equipe': 'REPOS', 'poste': 'chauffeur'})
+    ajouter_ligne_poste('Chauffeurs', 'REPOS_CHAUFFEUR')
     
     # ========== SECTION IV - CERTIFICATION DIRECTION ==========
     ajouter_titre_section('IV - CERTIFICATION DE CAPTURE DES PRODUITS DE LA PECHE - DIRECTION', '00B0F0')
     
-    # Ligne 1 des agents
+    # Agents de certification direction (peut y en avoir plusieurs par jour)
     row_data = ['Agents']
     for i in range(7):
         jour = planning.date_debut + timedelta(days=i)
         affs = Affectation.query.filter_by(
             planning_id=planning.id,
             jour=jour,
-            poste='certification_direction'
+            activite='CERTIFICATION_DIRECTION'
         ).all()
+        
+        # Prendre le premier agent
         row_data.append(affs[0].agent.nom_complet if affs else '')
     data.append(row_data)
     current_row += 1
@@ -1172,60 +1226,97 @@ def export_planning_pdf(planning_id):
         affs = Affectation.query.filter_by(
             planning_id=planning.id,
             jour=jour,
-            poste='certification_direction'
+            activite='CERTIFICATION_DIRECTION'
         ).all()
         row_data.append(affs[1].agent.nom_complet if len(affs) > 1 else '')
     data.append(row_data)
     current_row += 1
     
+    # Ligne 3 des agents
+    row_data = ['']
+    for i in range(7):
+        jour = planning.date_debut + timedelta(days=i)
+        affs = Affectation.query.filter_by(
+            planning_id=planning.id,
+            jour=jour,
+            activite='CERTIFICATION_DIRECTION'
+        ).all()
+        row_data.append(affs[2].agent.nom_complet if len(affs) > 2 else '')
+    data.append(row_data)
+    current_row += 1
+    
     # ========== SECTION V - CERTIFICATION AÉROPORT ==========
     ajouter_titre_section('V - CERTIFICATION DE CAPTURE DES PRODUITS DE LA PECHE - AEROPORT', '00B050')
-    ajouter_ligne_poste('Agents', {'poste': 'certification_aeroport'})
+    ajouter_ligne_poste('Agents', 'CERTIFICATION_AEROPORT')
     
     # ========== SECTION VI - PATROUILLE MARITIME ==========
     ajouter_titre_section('VI - PATROUILLE MARITIME COTIERE', '0070C0')
-    ajouter_ligne_poste('Inspecteurs', {'poste': 'patrouille_maritime'})
+    ajouter_ligne_poste('Inspecteurs', 'PATROUILLE_COTIERE')
     
     # ========== SECTION VII - GARDIENNAGE ==========
     ajouter_titre_section('VII - GARDIENNAGE', '7030A0')
-    ajouter_ligne_poste('Agents', {'poste': 'gardien'})
+    ajouter_ligne_poste('Agents', 'GARDIENNAGE')
     
     # ========== SECTION VIII - COURRIER ==========
     ajouter_titre_section('VIII - COURRIER', 'FFC000')
-    ajouter_ligne_poste('Chauffeurs', {'poste': 'courrier'}, 'FFFF00')
+    ajouter_ligne_poste('Chauffeurs', 'COURRIER', label_color_hex='FFFF00')
     
     # ========== SECTION IX - INSPECTION USINES ==========
     ajouter_titre_section('IX - INSPECTION USINES', '00B050')
-    ajouter_ligne_poste('Inspecteurs', {'poste': 'inspection_usines'})
+    
+    # Inspecteurs (peut y en avoir plusieurs)
+    row_data = ['Inspecteurs']
+    for i in range(7):
+        jour = planning.date_debut + timedelta(days=i)
+        affs = Affectation.query.filter_by(
+            planning_id=planning.id,
+            jour=jour,
+            activite='INSPECTION_USINE'
+        ).filter(Affectation.sous_activite.like('%Inspecteur%')).all()
+        
+        noms = [aff.agent.nom_complet for aff in affs]
+        row_data.append('\n'.join(noms) if noms else '')
+    data.append(row_data)
+    current_row += 1
     
     # Ligne vide
     data.append([''] * 8)
     current_row += 1
     
-    ajouter_ligne_poste('Chauffeurs', {'poste': 'inspection_usines_chauffeur'}, 'FFFF00')
+    ajouter_ligne_poste('Chauffeurs', 'INSPECTION_USINE', sous_activite_filter='Chauffeur', label_color_hex='FFFF00')
     
     # ========== SECTION X - PATROUILLE AÉRIENNE ==========
     ajouter_titre_section('X - PATROUILLE AERIENNE', '4472C4')
-    ajouter_ligne_poste('Inspecteurs', {'poste': 'patrouille_aerienne'})
+    ajouter_ligne_poste('Inspecteurs', 'PATROUILLE_AERIENNE')
     
     # ========== SECTION XI - MISSION/CONGÉS ==========
     ajouter_titre_section('XI - EN MISSION OU EN CONGES', 'C00000')
     
-    # Ligne pour INSPECTEURS
-    data.append(['INSPECTEURS'] + [''] * 7)
+    # En-tête INSPECTEURS
+    data.append(['INSPECTEURS', '', '', '', '', 'PERIODE', '', ''])
+    row_styles.append({
+        'row': current_row,
+        'type': 'subheader',
+        'color': colors.white
+    })
     current_row += 1
     
     # Chercher les agents en mission
-    agents_en_mission = User.query.filter_by(role='agent', disponibilite=False).all()
+    agents_en_mission = User.query.filter_by(role='agent', est_absent=True, missions=True).all()
     
     if agents_en_mission:
-        for agent in agents_en_mission[:2]:  # Limiter à 2 pour tenir sur la page
-            data.append([agent.nom_complet, 'EN MISSION'] + [''] * 5)
+        for idx, agent in enumerate(agents_en_mission[:3], 1):
+            data.append([f"{idx}. {agent.nom_complet}", '', '', '', '', 'En Mission', '', ''])
             current_row += 1
     else:
         # Lignes vides
-        data.append([''] * 8)
-        current_row += 1
+        for _ in range(3):
+            data.append([''] * 8)
+            current_row += 1
+    
+    # Ligne vide
+    data.append([''] * 8)
+    current_row += 1
     
     # CHAUFFEURS
     data.append(['CHAUFFEURS'] + [''] * 7)
@@ -1236,12 +1327,19 @@ def export_planning_pdf(planning_id):
     # ========== SECTION XII - EMBARQUEMENTS ==========
     ajouter_titre_section('XII -  EMBARQUEMENTS', '002060')
     
-    data.append(['OBSERVATEURS'] + [''] * 7)
+    # En-tête
+    data.append(['OBSERVATEURS', '', '', '', '', 'PERIODE', '', ''])
+    row_styles.append({
+        'row': current_row,
+        'type': 'subheader',
+        'color': colors.white
+    })
     current_row += 1
     
-    # Chercher les observateurs
-    observateurs = User.query.filter_by(est_observateur_embarque=True).all()
+    # Chercher les observateurs embarqués
+    observateurs = User.query.filter(User.date_embarquement.isnot(None)).all()
     obs_actifs = []
+    
     for obs in observateurs:
         if obs.date_embarquement and obs.date_debarquement_prevue:
             if (obs.date_embarquement <= planning.date_fin and 
@@ -1249,18 +1347,18 @@ def export_planning_pdf(planning_id):
                 obs_actifs.append(obs)
     
     if obs_actifs:
-        for idx, obs in enumerate(obs_actifs[:3], 1):  # Limiter à 3
+        for idx, obs in enumerate(obs_actifs[:3], 1):
             periode = ''
             if obs.date_embarquement and obs.date_debarquement_prevue:
-                periode = f"{obs.date_embarquement.strftime('%d/%m')} - {obs.date_debarquement_prevue.strftime('%d/%m')}"
-            data.append([f"{idx}. {obs.nom_complet}", periode] + [''] * 5)
+                periode = f"{obs.date_embarquement.strftime('%d/%m/%Y')} - {obs.date_debarquement_prevue.strftime('%d/%m/%Y')}"
+            data.append([f"{idx}. {obs.nom_complet}", '', '', '', '', periode, '', ''])
             current_row += 1
     else:
-        data.append([''] * 8)
-        current_row += 1
+        for _ in range(3):
+            data.append([''] * 8)
+            current_row += 1
     
     # ========== CRÉER LE TABLEAU AVEC STYLES ==========
-    # Largeurs de colonnes optimisées
     col_widths = [doc.width * 0.16] + [doc.width * 0.12] * 7
     
     table = Table(data, colWidths=col_widths, repeatRows=1)
@@ -1274,7 +1372,7 @@ def export_planning_pdf(planning_id):
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 6.5),
-        ('FONTSIZE', (0, 1), (-1, -1), 5.5),  # Texte réduit pour tout tenir
+        ('FONTSIZE', (0, 1), (-1, -1), 5.5),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
         ('TOPPADDING', (0, 0), (-1, -1), 2),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
@@ -1303,6 +1401,14 @@ def export_planning_pdf(planning_id):
                 ('TEXTCOLOR', (0, row_idx), (0, row_idx), colors.black),
                 ('FONTNAME', (0, row_idx), (0, row_idx), 'Helvetica-Bold'),
             ])
+        
+        elif style_info['type'] == 'subheader':
+            # Sous-en-tête (INSPECTEURS, OBSERVATEURS)
+            base_styles.extend([
+                ('BACKGROUND', (0, row_idx), (-1, row_idx), colors.HexColor('#E0E0E0')),
+                ('FONTNAME', (0, row_idx), (-1, row_idx), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, row_idx), (-1, row_idx), 6),
+            ])
     
     table.setStyle(TableStyle(base_styles))
     
@@ -1317,446 +1423,734 @@ def export_planning_pdf(planning_id):
     response.headers['Content-Type'] = 'application/pdf'
     response.headers['Content-Disposition'] = f'attachment; filename=planning_semaine_{planning.semaine}_{planning.annee}.pdf'
     return response
+# @app.route('/admin/plannings/<int:planning_id>/export/excel')
+# @login_required
+# def export_planning_excel(planning_id):
+#     """Exporter un planning en Excel - Format exact du template"""
+#     planning = Planning.query.get_or_404(planning_id)
+    
+#     wb = Workbook()
+#     ws = wb.active
+#     ws.title = f"Semaine {planning.semaine}"
+    
+#     # ========== TITRE DU PLANNING ==========
+#     date_debut_str = planning.date_debut.strftime('%d/%m/%Y')
+#     date_fin_str = planning.date_fin.strftime('%d/%m/%Y')
+#     mois_annee = planning.date_debut.strftime('%B %Y').upper()
+    
+#     ws.merge_cells('A1:H1')
+#     title_cell = ws['A1']
+#     title_cell.value = f"PLANNING HEBDOMADAIRE DE TRAVAIL DU {date_debut_str.split('/')[0]} AU {date_fin_str.split('/')[0]} {mois_annee}"
+#     title_cell.font = Font(bold=True, size=14, color="000000")
+#     title_cell.alignment = Alignment(horizontal='center', vertical='center')
+#     title_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+#     ws.row_dimensions[1].height = 30
+    
+#     # ========== EN-TÊTE DES JOURS ==========
+#     jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+#     header_row = ['Dates']
+    
+#     for i in range(7):
+#         jour_date = planning.date_debut + timedelta(days=i)
+#         header_row.append(f"{jours_semaine[i]} {jour_date.strftime('%d/%m/%Y')}")
+    
+#     ws.append(header_row)
+    
+#     # Style de l'en-tête
+#     for col_num, cell in enumerate(ws[2], 1):
+#         cell.font = Font(bold=True, color="000000", size=9)
+#         cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+#         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+#         cell.border = Border(
+#             left=Side(style='thin'), right=Side(style='thin'),
+#             top=Side(style='thin'), bottom=Side(style='thin')
+#         )
+#     ws.row_dimensions[2].height = 25
+    
+#     current_row = 3
+#     border_thin = Border(
+#         left=Side(style='thin'), right=Side(style='thin'),
+#         top=Side(style='thin'), bottom=Side(style='thin')
+#     )
+    
+#     # ========== ORGANISER LES DONNÉES ==========
+#     sections_data = _organiser_affectations_par_sections(planning)
+    
+#     # ========== SECTION I - VEILLE CRSS ==========
+#     section = sections_data['I_VEILLE_CRSS']
+#     ws.append([section['titre']] + [''] * 7)
+#     ws.merge_cells(f'A{current_row}:H{current_row}')
+#     cell = ws[f'A{current_row}']
+#     cell.font = Font(bold=True, color="000000", size=10)
+#     cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
+#     cell.alignment = Alignment(horizontal='center', vertical='center')
+#     cell.border = border_thin
+#     ws.row_dimensions[current_row].height = 20
+#     current_row += 1
+    
+#     # Sous-section Journée
+#     journee = section['sous_sections']['journee']
+    
+#     # UNE SEULE LIGNE : Label + Noms des agents pour chaque jour
+#     row_data = [journee['titre']]
+#     for i in range(7):  # Pour chaque jour
+#         jour = planning.date_debut + timedelta(days=i)
+#         # Trouver l'agent affecté ce jour
+#         aff = Affectation.query.filter_by(
+#             planning_id=planning.id,
+#             jour=jour,
+#             shift='jour',
+#             equipe='CRSS'
+#         ).first()
+        
+#         if aff:
+#             row_data.append(aff.agent.nom_complet)
+#         else:
+#             row_data.append('')
+    
+#     ws.append(row_data)
+    
+#     # Styler la ligne
+#     for col in range(1, 9):
+#         cell = ws.cell(row=current_row, column=col)
+#         cell.alignment = Alignment(horizontal='center', vertical='center')
+#         cell.border = border_thin
+#         if col == 1:  # Label
+#             cell.font = Font(bold=True, size=9)
+#             cell.fill = PatternFill(start_color=journee['couleur'], end_color=journee['couleur'], fill_type="solid")
+#         else:  # Noms agents
+#             cell.font = Font(size=9)
+#     current_row += 1
+    
+#     # Sous-section Nuit
+#     nuit = section['sous_sections']['nuit']
+    
+#     # UNE SEULE LIGNE : Label + Noms des agents pour chaque jour
+#     row_data = [nuit['titre']]
+#     for i in range(7):  # Pour chaque jour
+#         jour = planning.date_debut + timedelta(days=i)
+#         # Trouver l'agent affecté ce jour
+#         aff = Affectation.query.filter_by(
+#             planning_id=planning.id,
+#             jour=jour,
+#             shift='nuit',
+#             equipe='CRSS'
+#         ).first()
+        
+#         if aff:
+#             row_data.append(aff.agent.nom_complet)
+#         else:
+#             row_data.append('')
+    
+#     ws.append(row_data)
+    
+#     # Styler la ligne
+#     for col in range(1, 9):
+#         cell = ws.cell(row=current_row, column=col)
+#         cell.alignment = Alignment(horizontal='center', vertical='center')
+#         cell.border = border_thin
+#         if col == 1:  # Label
+#             cell.font = Font(bold=True, size=9)
+#             cell.fill = PatternFill(start_color=nuit['couleur'], end_color=nuit['couleur'], fill_type="solid")
+#         else:  # Noms agents
+#             cell.font = Font(size=9)
+#     current_row += 1
+    
+#     # ========== SECTION II - BRIGADE BVP ==========
+#     section = sections_data['II_BRIGADE_BVP']
+#     ws.append([section['titre']] + [''] * 7)
+#     ws.merge_cells(f'A{current_row}:H{current_row}')
+#     cell = ws[f'A{current_row}']
+#     cell.font = Font(bold=True, color="000000", size=10)
+#     cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
+#     cell.alignment = Alignment(horizontal='center', vertical='center')
+#     cell.border = border_thin
+#     ws.row_dimensions[current_row].height = 20
+#     current_row += 1
+    
+#     # Pour chaque poste dans la brigade
+#     for poste_key in ['chef', 'inspecteur', 'autres']:
+#         poste_data = section['postes'][poste_key]
+        
+#         # UNE SEULE LIGNE : Label du poste + Noms des agents pour chaque jour
+#         row_data = [poste_data['titre']]
+#         for i in range(7):  # Pour chaque jour
+#             jour = planning.date_debut + timedelta(days=i)
+#             # Trouver l'agent affecté ce jour pour ce poste
+#             aff = Affectation.query.filter_by(
+#                 planning_id=planning.id,
+#                 jour=jour,
+#                 equipe='BVP',
+#                 poste=poste_key
+#             ).first()
+            
+#             if aff:
+#                 row_data.append(aff.agent.nom_complet)
+#             else:
+#                 row_data.append('')
+        
+#         ws.append(row_data)
+        
+#         # Styler la ligne
+#         for col in range(1, 9):
+#             cell = ws.cell(row=current_row, column=col)
+#             cell.alignment = Alignment(horizontal='center', vertical='center')
+#             cell.border = border_thin
+#             cell.font = Font(size=9)
+#             if col == 1:  # Label en gras
+#                 cell.font = Font(bold=True, size=9)
+#         current_row += 1
+    
+#     # Ligne vide
+#     ws.append([''] * 8)
+#     current_row += 1
+    
+#     # Chauffeurs (avec fond jaune) - UNE SEULE LIGNE
+#     chauffeurs = section['postes']['chauffeurs']
+#     row_data = [chauffeurs['titre']]
+    
+#     for i in range(7):  # Pour chaque jour
+#         jour = planning.date_debut + timedelta(days=i)
+#         # Trouver le chauffeur affecté ce jour
+#         aff = Affectation.query.filter_by(
+#             planning_id=planning.id,
+#             jour=jour,
+#             equipe='BVP',
+#             poste='chauffeur'
+#         ).first()
+        
+#         if aff:
+#             row_data.append(aff.agent.nom_complet)
+#         else:
+#             row_data.append('')
+    
+#     ws.append(row_data)
+    
+#     for col in range(1, 9):
+#         cell = ws.cell(row=current_row, column=col)
+#         cell.alignment = Alignment(horizontal='center', vertical='center')
+#         cell.border = border_thin
+#         if col == 1:  # Label
+#             cell.font = Font(bold=True, size=9)
+#             cell.fill = PatternFill(start_color=chauffeurs['couleur'], end_color=chauffeurs['couleur'], fill_type="solid")
+#         else:  # Noms
+#             cell.font = Font(size=9)
+#     current_row += 1
+    
+#     # ========== SECTIONS III À X - Même pattern ==========
+#     # Pour gagner du temps, je crée une fonction helper
+#     def ajouter_section_simple(section_key, has_subsection=False, subsection_keys=None):
+#         nonlocal current_row
+#         section = sections_data[section_key]
+        
+#         # Titre de section
+#         ws.append([section['titre']] + [''] * 7)
+#         ws.merge_cells(f'A{current_row}:H{current_row}')
+#         cell = ws[f'A{current_row}']
+#         cell.font = Font(bold=True, color="000000", size=10)
+#         cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
+#         cell.alignment = Alignment(horizontal='center', vertical='center')
+#         cell.border = border_thin
+#         ws.row_dimensions[current_row].height = 20
+#         current_row += 1
+        
+#         if has_subsection and subsection_keys:
+#             for sub_key in subsection_keys:
+#                 sub_data = section[sub_key] if isinstance(section.get(sub_key), dict) else None
+#                 if sub_data and 'agents' in sub_data:
+#                     # Titre sous-section
+#                     ws.append([sub_data.get('titre', sub_key)] + [''] * 7)
+#                     for col in range(1, 9):
+#                         cell = ws.cell(row=current_row, column=col)
+#                         cell.font = Font(size=9)
+#                         if 'couleur' in sub_data:
+#                             cell.fill = PatternFill(start_color=sub_data['couleur'], 
+#                                                     end_color=sub_data['couleur'], fill_type="solid")
+#                         cell.alignment = Alignment(horizontal='center', vertical='center')
+#                         cell.border = border_thin
+#                     current_row += 1
+                    
+#                     # Agents
+#                     for agent_id, agent_data in sub_data['agents'].items():
+#                         row_data = [agent_data['nom']]
+#                         for i in range(7):
+#                             if i in agent_data['jours']:
+#                                 row_data.append(agent_data['jours'][i].agent.nom_complet)
+#                             else:
+#                                 row_data.append('')
+#                         ws.append(row_data)
+                        
+#                         for col in range(1, 9):
+#                             cell = ws.cell(row=current_row, column=col)
+#                             cell.alignment = Alignment(horizontal='center', vertical='center')
+#                             cell.border = border_thin
+#                             cell.font = Font(size=9)
+#                         current_row += 1
+                    
+#                     if not sub_data['agents']:
+#                         ws.append([''] * 8)
+#                         current_row += 1
+#         else:
+#             # Section simple avec juste agents
+#             if 'agents' in section:
+#                 for agent_id, agent_data in section['agents'].items():
+#                     row_data = [agent_data['nom']]
+#                     for i in range(7):
+#                         if i in agent_data['jours']:
+#                             row_data.append(agent_data['jours'][i].agent.nom_complet)
+#                         else:
+#                             row_data.append('')
+#                     ws.append(row_data)
+                    
+#                     for col in range(1, 9):
+#                         cell = ws.cell(row=current_row, column=col)
+#                         cell.alignment = Alignment(horizontal='center', vertical='center')
+#                         cell.border = border_thin
+#                         cell.font = Font(size=9)
+#                     current_row += 1
+                
+#                 if not section['agents']:
+#                     ws.append([''] * 8)
+#                     current_row += 1
+    
+#     # Ajouter toutes les sections restantes
+#     ajouter_section_simple('III_REPOS_CHAUFFEURS', has_subsection=True, subsection_keys=['chauffeurs'])
+#     ajouter_section_simple('IV_CERTIFICATION_DIR')
+#     ajouter_section_simple('V_CERTIFICATION_AERO')
+#     ajouter_section_simple('VI_PATROUILLE_MARITIME', has_subsection=True, subsection_keys=['inspecteurs'])
+#     ajouter_section_simple('VII_GARDIENNAGE')
+#     ajouter_section_simple('VIII_COURRIER', has_subsection=True, subsection_keys=['chauffeurs'])
+    
+#     # Section IX avec postes multiples
+#     section = sections_data['IX_INSPECTION_USINES']
+#     ws.append([section['titre']] + [''] * 7)
+#     ws.merge_cells(f'A{current_row}:H{current_row}')
+#     cell = ws[f'A{current_row}']
+#     cell.font = Font(bold=True, color="000000", size=10)
+#     cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
+#     cell.alignment = Alignment(horizontal='center', vertical='center')
+#     cell.border = border_thin
+#     ws.row_dimensions[current_row].height = 20
+#     current_row += 1
+    
+#     for poste_key in ['inspecteurs', 'chauffeurs']:
+#         poste_data = section['postes'][poste_key]
+#         ws.append([poste_data['titre']] + [''] * 7)
+#         for col in range(1, 9):
+#             cell = ws.cell(row=current_row, column=col)
+#             cell.font = Font(size=9)
+#             if 'couleur' in poste_data:
+#                 cell.fill = PatternFill(start_color=poste_data['couleur'], 
+#                                         end_color=poste_data['couleur'], fill_type="solid")
+#             cell.alignment = Alignment(horizontal='center', vertical='center')
+#             cell.border = border_thin
+#         current_row += 1
+        
+#         for agent_id, agent_data in poste_data['agents'].items():
+#             row_data = [agent_data['nom']]
+#             for i in range(7):
+#                 if i in agent_data['jours']:
+#                     row_data.append(agent_data['jours'][i].agent.nom_complet)
+#                 else:
+#                     row_data.append('')
+#             ws.append(row_data)
+            
+#             for col in range(1, 9):
+#                 cell = ws.cell(row=current_row, column=col)
+#                 cell.alignment = Alignment(horizontal='center', vertical='center')
+#                 cell.border = border_thin
+#                 cell.font = Font(size=9)
+#             current_row += 1
+        
+#         if not poste_data['agents']:
+#             ws.append([''] * 8)
+#             current_row += 1
+    
+#     ajouter_section_simple('X_PATROUILLE_AERIENNE', has_subsection=True, subsection_keys=['inspecteurs'])
+    
+#     # ========== SECTION XI - MISSION/CONGES (Format spécial) ==========
+#     section = sections_data['XI_MISSION_CONGES']
+#     ws.append([section['titre']] + [''] * 7)
+#     ws.merge_cells(f'A{current_row}:H{current_row}')
+#     cell = ws[f'A{current_row}']
+#     cell.font = Font(bold=True, color="000000", size=10)
+#     cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
+#     cell.alignment = Alignment(horizontal='center', vertical='center')
+#     cell.border = border_thin
+#     ws.row_dimensions[current_row].height = 20
+#     current_row += 1
+    
+#     # En-tête spécial pour cette section
+#     ws.append(['PRENOMS ET NOM', '', '', '', '', 'PERIODE', '', ''])
+#     ws.merge_cells(f'A{current_row}:E{current_row}')
+#     ws.merge_cells(f'F{current_row}:H{current_row}')
+#     for col in range(1, 9):
+#         cell = ws.cell(row=current_row, column=col)
+#         cell.font = Font(bold=True, size=9)
+#         cell.alignment = Alignment(horizontal='center', vertical='center')
+#         cell.border = border_thin
+#     current_row += 1
+    
+#     # Personnes en mission/congés
+#     for idx, personne in enumerate(section['personnes'], 1):
+#         ws.append([f"{idx}. {personne['nom']}", '', '', '', '', personne['periode'], '', ''])
+#         ws.merge_cells(f'A{current_row}:E{current_row}')
+#         ws.merge_cells(f'F{current_row}:H{current_row}')
+#         for col in range(1, 9):
+#             cell = ws.cell(row=current_row, column=col)
+#             cell.alignment = Alignment(horizontal='center', vertical='center')
+#             cell.border = border_thin
+#             cell.font = Font(size=9)
+#         current_row += 1
+    
+#     if not section['personnes']:
+#         for _ in range(3):  # 3 lignes vides
+#             ws.append([''] * 8)
+#             current_row += 1
+    
+#     # Ajouter sections pour chauffeurs aussi
+#     ws.append(['CHAUFFEURS', '', '', '', '', '', '', ''])
+#     current_row += 1
+#     ws.append([''] * 8)
+#     current_row += 1
+    
+#     # ========== SECTION XII - EMBARQUEMENTS (Liste) ==========
+#     section = sections_data['XII_EMBARQUEMENTS']
+#     ws.append([section['titre']] + [''] * 7)
+#     ws.merge_cells(f'A{current_row}:H{current_row}')
+#     cell = ws[f'A{current_row}']
+#     cell.font = Font(bold=True, color="FFFFFF", size=10)
+#     cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
+#     cell.alignment = Alignment(horizontal='center', vertical='center')
+#     cell.border = border_thin
+#     ws.row_dimensions[current_row].height = 20
+#     current_row += 1
+    
+#     # En-tête pour les observateurs
+#     ws.append(['PRENOMS ET NOM', '', '', '', '', 'PERIODE', '', ''])
+#     ws.merge_cells(f'A{current_row}:E{current_row}')
+#     ws.merge_cells(f'F{current_row}:H{current_row}')
+#     for col in range(1, 9):
+#         cell = ws.cell(row=current_row, column=col)
+#         cell.font = Font(bold=True, size=9)
+#         cell.alignment = Alignment(horizontal='center', vertical='center')
+#         cell.border = border_thin
+#     current_row += 1
+    
+#     # Liste des observateurs embarqués
+#     for idx, obs in enumerate(section['observateurs'], 1):
+#         periode = ''
+#         if obs.get('date_emb') and obs.get('date_deb'):
+#             periode = f"{obs['date_emb'].strftime('%d/%m/%Y')} - {obs['date_deb'].strftime('%d/%m/%Y')}"
+        
+#         ws.append([f"{idx}. {obs['nom']}", '', '', '', '', periode, '', ''])
+#         ws.merge_cells(f'A{current_row}:E{current_row}')
+#         ws.merge_cells(f'F{current_row}:H{current_row}')
+#         for col in range(1, 9):
+#             cell = ws.cell(row=current_row, column=col)
+#             cell.alignment = Alignment(horizontal='center', vertical='center')
+#             cell.border = border_thin
+#             cell.font = Font(size=9, color="0000FF")  # Bleu comme dans le template
+#         current_row += 1
+    
+#     if not section['observateurs']:
+#         for _ in range(5):  # 5 lignes vides
+#             ws.append([''] * 8)
+#             current_row += 1
+    
+#     # ========== AJUSTER LES LARGEURS ==========
+#     ws.column_dimensions['A'].width = 25
+#     for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H']:
+#         ws.column_dimensions[col].width = 18
+    
+#     # ========== SAUVEGARDER ==========
+#     buffer = BytesIO()
+#     wb.save(buffer)
+#     buffer.seek(0)
+    
+#     response = make_response(buffer.getvalue())
+#     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+#     response.headers['Content-Disposition'] = f'attachment; filename=planning_semaine_{planning.semaine}_{planning.annee}.xlsx'
+    
+#     return response
 
 @app.route('/admin/plannings/<int:planning_id>/export/excel')
 @login_required
 def export_planning_excel(planning_id):
-    """Exporter un planning en Excel - Format exact du template"""
+    """Exporte le planning en Excel selon le format standard"""
     planning = Planning.query.get_or_404(planning_id)
     
+    # Créer un workbook
     wb = Workbook()
     ws = wb.active
-    ws.title = f"Semaine {planning.semaine}"
+    ws.title = f"PLANNING S_{planning.semaine}"
     
-    # ========== TITRE DU PLANNING ==========
-    date_debut_str = planning.date_debut.strftime('%d/%m/%Y')
-    date_fin_str = planning.date_fin.strftime('%d/%m/%Y')
-    mois_annee = planning.date_debut.strftime('%B %Y').upper()
+    # Styles
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    section_fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")
+    section_font = Font(bold=True, size=10)
+    border_thin = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
     
-    ws.merge_cells('A1:H1')
-    title_cell = ws['A1']
-    title_cell.value = f"PLANNING HEBDOMADAIRE DE TRAVAIL DU {date_debut_str.split('/')[0]} AU {date_fin_str.split('/')[0]} {mois_annee}"
-    title_cell.font = Font(bold=True, size=14, color="000000")
-    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-    title_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-    ws.row_dimensions[1].height = 30
+    # Récupérer les affectations
+    affectations = Affectation.query.filter_by(planning_id=planning.id).order_by(Affectation.jour).all()
+    
+    # Organiser par jour et activité
+    affectations_par_jour = {}
+    for i in range(7):
+        jour_date = planning.date_debut + timedelta(days=i)
+        affectations_par_jour[jour_date] = [aff for aff in affectations if aff.jour == jour_date]
+    
+    # ========== TITRE ==========
+    ws.merge_cells('B2:I2')
+    titre_cell = ws['B2']
+    titre_cell.value = f"PLANNING HEBDOMADAIRE DE TRAVAIL DU {planning.date_debut.strftime('%d AU %d %B %Y').upper()}"
+    titre_cell.font = Font(bold=True, size=14)
+    titre_cell.alignment = center_align
+    titre_cell.fill = header_fill
+    ws.row_dimensions[2].height = 25
     
     # ========== EN-TÊTE DES JOURS ==========
     jours_semaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
-    header_row = ['Dates']
+    ws.append(['', 'Dates'] + [f"{jour} {(planning.date_debut + timedelta(days=i)).strftime('%d/%m/%Y')}" 
+                                for i, jour in enumerate(jours_semaine)])
     
-    for i in range(7):
-        jour_date = planning.date_debut + timedelta(days=i)
-        header_row.append(f"{jours_semaine[i]} {jour_date.strftime('%d/%m/%Y')}")
-    
-    ws.append(header_row)
-    
-    # Style de l'en-tête
-    for col_num, cell in enumerate(ws[2], 1):
-        cell.font = Font(bold=True, color="000000", size=9)
-        cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        cell.border = Border(
-            left=Side(style='thin'), right=Side(style='thin'),
-            top=Side(style='thin'), bottom=Side(style='thin')
-        )
-    ws.row_dimensions[2].height = 25
-    
-    current_row = 3
-    border_thin = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
-    )
-    
-    # ========== ORGANISER LES DONNÉES ==========
-    sections_data = _organiser_affectations_par_sections(planning)
-    
-    # ========== SECTION I - VEILLE CRSS ==========
-    section = sections_data['I_VEILLE_CRSS']
-    ws.append([section['titre']] + [''] * 7)
-    ws.merge_cells(f'A{current_row}:H{current_row}')
-    cell = ws[f'A{current_row}']
-    cell.font = Font(bold=True, color="000000", size=10)
-    cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
-    cell.alignment = Alignment(horizontal='center', vertical='center')
-    cell.border = border_thin
-    ws.row_dimensions[current_row].height = 20
-    current_row += 1
-    
-    # Sous-section Journée
-    journee = section['sous_sections']['journee']
-    
-    # UNE SEULE LIGNE : Label + Noms des agents pour chaque jour
-    row_data = [journee['titre']]
-    for i in range(7):  # Pour chaque jour
-        jour = planning.date_debut + timedelta(days=i)
-        # Trouver l'agent affecté ce jour
-        aff = Affectation.query.filter_by(
-            planning_id=planning.id,
-            jour=jour,
-            shift='jour',
-            equipe='CRSS'
-        ).first()
-        
-        if aff:
-            row_data.append(aff.agent.nom_complet)
-        else:
-            row_data.append('')
-    
-    ws.append(row_data)
-    
-    # Styler la ligne
-    for col in range(1, 9):
-        cell = ws.cell(row=current_row, column=col)
-        cell.alignment = Alignment(horizontal='center', vertical='center')
+    for col in range(2, 10):
+        cell = ws.cell(row=3, column=col)
+        cell.font = Font(bold=True, size=9)
+        cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+        cell.alignment = center_align
         cell.border = border_thin
-        if col == 1:  # Label
-            cell.font = Font(bold=True, size=9)
-            cell.fill = PatternFill(start_color=journee['couleur'], end_color=journee['couleur'], fill_type="solid")
-        else:  # Noms agents
-            cell.font = Font(size=9)
-    current_row += 1
     
-    # Sous-section Nuit
-    nuit = section['sous_sections']['nuit']
+    current_row = 4
     
-    # UNE SEULE LIGNE : Label + Noms des agents pour chaque jour
-    row_data = [nuit['titre']]
-    for i in range(7):  # Pour chaque jour
-        jour = planning.date_debut + timedelta(days=i)
-        # Trouver l'agent affecté ce jour
-        aff = Affectation.query.filter_by(
-            planning_id=planning.id,
-            jour=jour,
-            shift='nuit',
-            equipe='CRSS'
-        ).first()
-        
-        if aff:
-            row_data.append(aff.agent.nom_complet)
-        else:
-            row_data.append('')
-    
-    ws.append(row_data)
-    
-    # Styler la ligne
-    for col in range(1, 9):
-        cell = ws.cell(row=current_row, column=col)
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        cell.border = border_thin
-        if col == 1:  # Label
-            cell.font = Font(bold=True, size=9)
-            cell.fill = PatternFill(start_color=nuit['couleur'], end_color=nuit['couleur'], fill_type="solid")
-        else:  # Noms agents
-            cell.font = Font(size=9)
-    current_row += 1
-    
-    # ========== SECTION II - BRIGADE BVP ==========
-    section = sections_data['II_BRIGADE_BVP']
-    ws.append([section['titre']] + [''] * 7)
-    ws.merge_cells(f'A{current_row}:H{current_row}')
-    cell = ws[f'A{current_row}']
-    cell.font = Font(bold=True, color="000000", size=10)
-    cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
-    cell.alignment = Alignment(horizontal='center', vertical='center')
-    cell.border = border_thin
-    ws.row_dimensions[current_row].height = 20
-    current_row += 1
-    
-    # Pour chaque poste dans la brigade
-    for poste_key in ['chef', 'inspecteur', 'autres']:
-        poste_data = section['postes'][poste_key]
-        
-        # UNE SEULE LIGNE : Label du poste + Noms des agents pour chaque jour
-        row_data = [poste_data['titre']]
-        for i in range(7):  # Pour chaque jour
-            jour = planning.date_debut + timedelta(days=i)
-            # Trouver l'agent affecté ce jour pour ce poste
-            aff = Affectation.query.filter_by(
-                planning_id=planning.id,
-                jour=jour,
-                equipe='BVP',
-                poste=poste_key
-            ).first()
-            
-            if aff:
-                row_data.append(aff.agent.nom_complet)
-            else:
-                row_data.append('')
-        
-        ws.append(row_data)
-        
-        # Styler la ligne
-        for col in range(1, 9):
-            cell = ws.cell(row=current_row, column=col)
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.border = border_thin
-            cell.font = Font(size=9)
-            if col == 1:  # Label en gras
-                cell.font = Font(bold=True, size=9)
-        current_row += 1
-    
-    # Ligne vide
-    ws.append([''] * 8)
-    current_row += 1
-    
-    # Chauffeurs (avec fond jaune) - UNE SEULE LIGNE
-    chauffeurs = section['postes']['chauffeurs']
-    row_data = [chauffeurs['titre']]
-    
-    for i in range(7):  # Pour chaque jour
-        jour = planning.date_debut + timedelta(days=i)
-        # Trouver le chauffeur affecté ce jour
-        aff = Affectation.query.filter_by(
-            planning_id=planning.id,
-            jour=jour,
-            equipe='BVP',
-            poste='chauffeur'
-        ).first()
-        
-        if aff:
-            row_data.append(aff.agent.nom_complet)
-        else:
-            row_data.append('')
-    
-    ws.append(row_data)
-    
-    for col in range(1, 9):
-        cell = ws.cell(row=current_row, column=col)
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        cell.border = border_thin
-        if col == 1:  # Label
-            cell.font = Font(bold=True, size=9)
-            cell.fill = PatternFill(start_color=chauffeurs['couleur'], end_color=chauffeurs['couleur'], fill_type="solid")
-        else:  # Noms
-            cell.font = Font(size=9)
-    current_row += 1
-    
-    # ========== SECTIONS III À X - Même pattern ==========
-    # Pour gagner du temps, je crée une fonction helper
-    def ajouter_section_simple(section_key, has_subsection=False, subsection_keys=None):
+    # ========== FONCTION HELPER ==========
+    def ajouter_section(titre, couleur, filtrer_func):
         nonlocal current_row
-        section = sections_data[section_key]
-        
-        # Titre de section
-        ws.append([section['titre']] + [''] * 7)
-        ws.merge_cells(f'A{current_row}:H{current_row}')
-        cell = ws[f'A{current_row}']
-        cell.font = Font(bold=True, color="000000", size=10)
-        cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
-        cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.append([f'', titre] + [''] * 7)
+        ws.merge_cells(f'B{current_row}:I{current_row}')
+        cell = ws[f'B{current_row}']
+        cell.font = Font(bold=True, size=10)
+        cell.fill = PatternFill(start_color=couleur, end_color=couleur, fill_type="solid")
+        cell.alignment = center_align
         cell.border = border_thin
         ws.row_dimensions[current_row].height = 20
         current_row += 1
         
-        if has_subsection and subsection_keys:
-            for sub_key in subsection_keys:
-                sub_data = section[sub_key] if isinstance(section.get(sub_key), dict) else None
-                if sub_data and 'agents' in sub_data:
-                    # Titre sous-section
-                    ws.append([sub_data.get('titre', sub_key)] + [''] * 7)
-                    for col in range(1, 9):
-                        cell = ws.cell(row=current_row, column=col)
-                        cell.font = Font(size=9)
-                        if 'couleur' in sub_data:
-                            cell.fill = PatternFill(start_color=sub_data['couleur'], 
-                                                    end_color=sub_data['couleur'], fill_type="solid")
-                        cell.alignment = Alignment(horizontal='center', vertical='center')
-                        cell.border = border_thin
-                    current_row += 1
-                    
-                    # Agents
-                    for agent_id, agent_data in sub_data['agents'].items():
-                        row_data = [agent_data['nom']]
-                        for i in range(7):
-                            if i in agent_data['jours']:
-                                row_data.append(agent_data['jours'][i].agent.nom_complet)
-                            else:
-                                row_data.append('')
-                        ws.append(row_data)
-                        
-                        for col in range(1, 9):
-                            cell = ws.cell(row=current_row, column=col)
-                            cell.alignment = Alignment(horizontal='center', vertical='center')
-                            cell.border = border_thin
-                            cell.font = Font(size=9)
-                        current_row += 1
-                    
-                    if not sub_data['agents']:
-                        ws.append([''] * 8)
-                        current_row += 1
-        else:
-            # Section simple avec juste agents
-            if 'agents' in section:
-                for agent_id, agent_data in section['agents'].items():
-                    row_data = [agent_data['nom']]
-                    for i in range(7):
-                        if i in agent_data['jours']:
-                            row_data.append(agent_data['jours'][i].agent.nom_complet)
-                        else:
-                            row_data.append('')
-                    ws.append(row_data)
-                    
-                    for col in range(1, 9):
-                        cell = ws.cell(row=current_row, column=col)
-                        cell.alignment = Alignment(horizontal='center', vertical='center')
-                        cell.border = border_thin
-                        cell.font = Font(size=9)
-                    current_row += 1
-                
-                if not section['agents']:
-                    ws.append([''] * 8)
-                    current_row += 1
-    
-    # Ajouter toutes les sections restantes
-    ajouter_section_simple('III_REPOS_CHAUFFEURS', has_subsection=True, subsection_keys=['chauffeurs'])
-    ajouter_section_simple('IV_CERTIFICATION_DIR')
-    ajouter_section_simple('V_CERTIFICATION_AERO')
-    ajouter_section_simple('VI_PATROUILLE_MARITIME', has_subsection=True, subsection_keys=['inspecteurs'])
-    ajouter_section_simple('VII_GARDIENNAGE')
-    ajouter_section_simple('VIII_COURRIER', has_subsection=True, subsection_keys=['chauffeurs'])
-    
-    # Section IX avec postes multiples
-    section = sections_data['IX_INSPECTION_USINES']
-    ws.append([section['titre']] + [''] * 7)
-    ws.merge_cells(f'A{current_row}:H{current_row}')
-    cell = ws[f'A{current_row}']
-    cell.font = Font(bold=True, color="000000", size=10)
-    cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
-    cell.alignment = Alignment(horizontal='center', vertical='center')
-    cell.border = border_thin
-    ws.row_dimensions[current_row].height = 20
-    current_row += 1
-    
-    for poste_key in ['inspecteurs', 'chauffeurs']:
-        poste_data = section['postes'][poste_key]
-        ws.append([poste_data['titre']] + [''] * 7)
-        for col in range(1, 9):
-            cell = ws.cell(row=current_row, column=col)
-            cell.font = Font(size=9)
-            if 'couleur' in poste_data:
-                cell.fill = PatternFill(start_color=poste_data['couleur'], 
-                                        end_color=poste_data['couleur'], fill_type="solid")
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.border = border_thin
-        current_row += 1
+        # Récupérer agents par jour
+        agents_par_jour = {}
+        for jour_date in affectations_par_jour:
+            jour_idx = (jour_date - planning.date_debut).days
+            agents = filtrer_func(affectations_par_jour[jour_date])
+            agents_par_jour[jour_idx] = agents
         
-        for agent_id, agent_data in poste_data['agents'].items():
-            row_data = [agent_data['nom']]
-            for i in range(7):
-                if i in agent_data['jours']:
-                    row_data.append(agent_data['jours'][i].agent.nom_complet)
-                else:
-                    row_data.append('')
-            ws.append(row_data)
-            
-            for col in range(1, 9):
-                cell = ws.cell(row=current_row, column=col)
-                cell.alignment = Alignment(horizontal='center', vertical='center')
-                cell.border = border_thin
-                cell.font = Font(size=9)
-            current_row += 1
+        return agents_par_jour
+    
+    def ajouter_ligne_agents(label, agents_dict, couleur_cell=None):
+        nonlocal current_row
+        ligne = ['', label]
+        for i in range(7):
+            agents = agents_dict.get(i, [])
+            ligne.append(', '.join([a.agent.nom_complet for a in agents]) if agents else '')
+        ws.append(ligne)
         
-        if not poste_data['agents']:
-            ws.append([''] * 8)
-            current_row += 1
-    
-    ajouter_section_simple('X_PATROUILLE_AERIENNE', has_subsection=True, subsection_keys=['inspecteurs'])
-    
-    # ========== SECTION XI - MISSION/CONGES (Format spécial) ==========
-    section = sections_data['XI_MISSION_CONGES']
-    ws.append([section['titre']] + [''] * 7)
-    ws.merge_cells(f'A{current_row}:H{current_row}')
-    cell = ws[f'A{current_row}']
-    cell.font = Font(bold=True, color="000000", size=10)
-    cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
-    cell.alignment = Alignment(horizontal='center', vertical='center')
-    cell.border = border_thin
-    ws.row_dimensions[current_row].height = 20
-    current_row += 1
-    
-    # En-tête spécial pour cette section
-    ws.append(['PRENOMS ET NOM', '', '', '', '', 'PERIODE', '', ''])
-    ws.merge_cells(f'A{current_row}:E{current_row}')
-    ws.merge_cells(f'F{current_row}:H{current_row}')
-    for col in range(1, 9):
-        cell = ws.cell(row=current_row, column=col)
-        cell.font = Font(bold=True, size=9)
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        cell.border = border_thin
-    current_row += 1
-    
-    # Personnes en mission/congés
-    for idx, personne in enumerate(section['personnes'], 1):
-        ws.append([f"{idx}. {personne['nom']}", '', '', '', '', personne['periode'], '', ''])
-        ws.merge_cells(f'A{current_row}:E{current_row}')
-        ws.merge_cells(f'F{current_row}:H{current_row}')
-        for col in range(1, 9):
+        for col in range(1, 10):
             cell = ws.cell(row=current_row, column=col)
-            cell.alignment = Alignment(horizontal='center', vertical='center')
             cell.border = border_thin
-            cell.font = Font(size=9)
+            cell.alignment = center_align
+            if col == 2:
+                cell.font = Font(bold=True, size=9)
+                if couleur_cell:
+                    cell.fill = PatternFill(start_color=couleur_cell, end_color=couleur_cell, fill_type="solid")
+        
+        ws.row_dimensions[current_row].height = 30
         current_row += 1
     
-    if not section['personnes']:
-        for _ in range(3):  # 3 lignes vides
-            ws.append([''] * 8)
-            current_row += 1
+    # ========== I - VEILLE CRSS ==========
+    agents_crss_jour = ajouter_section(
+        'I - VEILLE CRSS',
+        '70AD47',
+        lambda affs: [a for a in affs if a.activite == 'VEILLE_CRSS' and a.shift == 'jour']
+    )
+    ajouter_ligne_agents('Journée: 08h - 17h', agents_crss_jour, 'FFFF00')
     
-    # Ajouter sections pour chauffeurs aussi
-    ws.append(['CHAUFFEURS', '', '', '', '', '', '', ''])
-    current_row += 1
-    ws.append([''] * 8)
+    agents_crss_nuit = {}
+    for jour_date in affectations_par_jour:
+        jour_idx = (jour_date - planning.date_debut).days
+        agents_crss_nuit[jour_idx] = [a for a in affectations_par_jour[jour_date] 
+                                       if a.activite == 'VEILLE_CRSS' and a.shift == 'nuit']
+    ajouter_ligne_agents('Nuit : 17h - 08h', agents_crss_nuit, '00B050')
+    
+    # ========== II - BRIGADE BVP ==========
+    ajouter_section('II - BRIGADE DE VEILLE PORTUAIRE', 'FFC000', lambda affs: [])
+    
+    # Chef d'équipe
+    agents_bvp_chef = {}
+    for jour_date in affectations_par_jour:
+        jour_idx = (jour_date - planning.date_debut).days
+        agents_bvp_chef[jour_idx] = [a for a in affectations_par_jour[jour_date] 
+                                      if a.activite == 'BVP' and "Chef" in str(a.sous_activite)]
+    ajouter_ligne_agents("Chef d'equipe", agents_bvp_chef)
+    
+    # Inspecteur
+    agents_bvp_insp = {}
+    for jour_date in affectations_par_jour:
+        jour_idx = (jour_date - planning.date_debut).days
+        agents_bvp_insp[jour_idx] = [a for a in affectations_par_jour[jour_date] 
+                                      if a.activite == 'BVP' and "Inspecteur" in str(a.sous_activite)]
+    ajouter_ligne_agents('Inspecteur de Veille', agents_bvp_insp)
+    
+    # Autres agents
+    agents_bvp_autres = {}
+    for jour_date in affectations_par_jour:
+        jour_idx = (jour_date - planning.date_debut).days
+        agents_bvp_autres[jour_idx] = [a for a in affectations_par_jour[jour_date] 
+                                        if a.activite == 'BVP' and "Autres" in str(a.sous_activite)]
+    ajouter_ligne_agents('Autres agents', agents_bvp_autres)
+    
+    # Ligne vide
+    ws.append([''] * 9)
     current_row += 1
     
-    # ========== SECTION XII - EMBARQUEMENTS (Liste) ==========
-    section = sections_data['XII_EMBARQUEMENTS']
-    ws.append([section['titre']] + [''] * 7)
-    ws.merge_cells(f'A{current_row}:H{current_row}')
-    cell = ws[f'A{current_row}']
+    # Chauffeurs (ligne spéciale)
+    agents_chauffeurs = {}
+    for jour_date in affectations_par_jour:
+        jour_idx = (jour_date - planning.date_debut).days
+        agents_chauffeurs[jour_idx] = [a for a in affectations_par_jour[jour_date] 
+                                        if a.activite == 'CHAUFFEUR']
+    ajouter_ligne_agents('Chauffeurs', agents_chauffeurs, 'FFFF00')
+    
+    # ========== III - REPOS CHAUFFEURS ==========
+    agents_repos = ajouter_section(
+        'III - REPOS CHAUFFEURS',
+        '92D050',
+        lambda affs: [a for a in affs if a.activite == 'REPOS_CHAUFFEUR']
+    )
+    ajouter_ligne_agents('Chauffeurs', agents_repos)
+    
+    # ========== IV - CERTIFICATION DIRECTION ==========
+    agents_cert_dir = ajouter_section(
+        'IV - CERTIFICATION DE CAPTURE DES PRODUITS DE LA PECHE - DIRECTION',
+        '00B0F0',
+        lambda affs: [a for a in affs if a.activite == 'CERTIFICATION_DIRECTION']
+    )
+    ajouter_ligne_agents('Agents', agents_cert_dir)
+    
+    # ========== V - CERTIFICATION AEROPORT ==========
+    agents_cert_aero = ajouter_section(
+        'V - CERTIFICATION DE CAPTURE DES PRODUITS DE LA PECHE - AEROPORT',
+        '00B050',
+        lambda affs: [a for a in affs if a.activite == 'CERTIFICATION_AEROPORT']
+    )
+    ajouter_ligne_agents('Agents', agents_cert_aero)
+    
+    # ========== VI - PATROUILLE MARITIME ==========
+    agents_patrol = ajouter_section(
+        'VI - PATROUILLE MARITIME COTIERE',
+        '0070C0',
+        lambda affs: [a for a in affs if a.activite == 'PATROUILLE_COTIERE']
+    )
+    ajouter_ligne_agents('Inspecteurs', agents_patrol)
+    
+    # ========== VII - GARDIENNAGE ==========
+    agents_gardien = ajouter_section(
+        'VII - GARDIENNAGE',
+        '7030A0',
+        lambda affs: [a for a in affs if a.activite == 'GARDIENNAGE']
+    )
+    ajouter_ligne_agents('Agents', agents_gardien)
+    
+    # ========== VIII - COURRIER ==========
+    agents_courrier = ajouter_section(
+        'VIII - COURRIER',
+        'FFC000',
+        lambda affs: [a for a in affs if a.activite == 'COURRIER']
+    )
+    ajouter_ligne_agents('Chauffeurs', agents_courrier, 'FFFF00')
+    
+    # ========== IX - INSPECTION USINES ==========
+    ajouter_section('IX - INSPECTION USINES', '00B050', lambda affs: [])
+    
+    agents_insp_usine = {}
+    for jour_date in affectations_par_jour:
+        jour_idx = (jour_date - planning.date_debut).days
+        agents_insp_usine[jour_idx] = [a for a in affectations_par_jour[jour_date] 
+                                        if a.activite == 'INSPECTION_USINE' and 'Inspecteur' in str(a.sous_activite)]
+    ajouter_ligne_agents('Inspecteurs', agents_insp_usine)
+    
+    agents_chauff_usine = {}
+    for jour_date in affectations_par_jour:
+        jour_idx = (jour_date - planning.date_debut).days
+        agents_chauff_usine[jour_idx] = [a for a in affectations_par_jour[jour_date] 
+                                          if a.activite == 'INSPECTION_USINE' and 'Chauffeur' in str(a.sous_activite)]
+    ajouter_ligne_agents('Chauffeurs', agents_chauff_usine, 'FFFF00')
+    
+    # ========== X - PATROUILLE AERIENNE ==========
+    agents_aero = ajouter_section(
+        'X - PATROUILLE AERIENNE',
+        '4472C4',
+        lambda affs: [a for a in affs if a.activite == 'PATROUILLE_AERIENNE']
+    )
+    ajouter_ligne_agents('Inspecteurs', agents_aero)
+    
+    # Lignes vides
+    ws.append([''] * 9)
+    current_row += 1
+    
+    # ========== XI - MISSIONS/CONGES ==========
+    ws.append(['', 'XI - EN MISSION OU EN CONGES'] + [''] * 7)
+    ws.merge_cells(f'B{current_row}:I{current_row}')
+    cell = ws[f'B{current_row}']
     cell.font = Font(bold=True, color="FFFFFF", size=10)
-    cell.fill = PatternFill(start_color=section['couleur'], end_color=section['couleur'], fill_type="solid")
-    cell.alignment = Alignment(horizontal='center', vertical='center')
-    cell.border = border_thin
+    cell.fill = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")
+    cell.alignment = center_align
     ws.row_dimensions[current_row].height = 20
     current_row += 1
     
-    # En-tête pour les observateurs
-    ws.append(['PRENOMS ET NOM', '', '', '', '', 'PERIODE', '', ''])
-    ws.merge_cells(f'A{current_row}:E{current_row}')
-    ws.merge_cells(f'F{current_row}:H{current_row}')
-    for col in range(1, 9):
-        cell = ws.cell(row=current_row, column=col)
-        cell.font = Font(bold=True, size=9)
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        cell.border = border_thin
-    current_row += 1
-    
-    # Liste des observateurs embarqués
-    for idx, obs in enumerate(section['observateurs'], 1):
-        periode = ''
-        if obs.get('date_emb') and obs.get('date_deb'):
-            periode = f"{obs['date_emb'].strftime('%d/%m/%Y')} - {obs['date_deb'].strftime('%d/%m/%Y')}"
-        
-        ws.append([f"{idx}. {obs['nom']}", '', '', '', '', periode, '', ''])
-        ws.merge_cells(f'A{current_row}:E{current_row}')
-        ws.merge_cells(f'F{current_row}:H{current_row}')
-        for col in range(1, 9):
-            cell = ws.cell(row=current_row, column=col)
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.border = border_thin
-            cell.font = Font(size=9, color="0000FF")  # Bleu comme dans le template
+    # Agents absents
+    agents_absents = User.query.filter_by(role='agent', est_absent=True, missions=True).all()
+    if agents_absents:
+        ws.append(['', 'PRENOMS ET NOM', '', '', '', 'PERIODE', '', '', ''])
+        ws.merge_cells(f'B{current_row}:E{current_row}')
+        ws.merge_cells(f'F{current_row}:I{current_row}')
         current_row += 1
-    
-    if not section['observateurs']:
-        for _ in range(5):  # 5 lignes vides
-            ws.append([''] * 8)
+        
+        for idx, agent in enumerate(agents_absents, 1):
+            periode = "En Mission"
+            ws.append(['', f'{idx}. {agent.nom_complet}', '', '', '', periode, '', '', ''])
+            ws.merge_cells(f'B{current_row}:E{current_row}')
+            ws.merge_cells(f'F{current_row}:I{current_row}')
             current_row += 1
     
-    # ========== AJUSTER LES LARGEURS ==========
-    ws.column_dimensions['A'].width = 25
-    for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H']:
-        ws.column_dimensions[col].width = 18
+    # ========== XII - EMBARQUEMENTS ==========
+    ws.append([''] * 9)
+    current_row += 1
+    ws.append(['', 'XII - EMBARQUEMENTS'] + [''] * 7)
+    ws.merge_cells(f'B{current_row}:I{current_row}')
+    cell = ws[f'B{current_row}']
+    cell.font = Font(bold=True, color="FFFFFF", size=10)
+    cell.fill = PatternFill(start_color="002060", end_color="002060", fill_type="solid")
+    cell.alignment = center_align
+    ws.row_dimensions[current_row].height = 20
+    current_row += 1
+    
+    # Observateurs embarqués (exemple)
+    ws.append(['', 'PRENOMS ET NOM', '', '', '', 'PERIODE', '', '', ''])
+    ws.merge_cells(f'B{current_row}:E{current_row}')
+    ws.merge_cells(f'F{current_row}:I{current_row}')
+    current_row += 1
+    
+    # ========== AJUSTER LARGEURS ==========
+    ws.column_dimensions['A'].width = 3
+    ws.column_dimensions['B'].width = 30
+    for col in ['C', 'D', 'E', 'F', 'G', 'H', 'I']:
+        ws.column_dimensions[col].width = 20
     
     # ========== SAUVEGARDER ==========
     buffer = BytesIO()
@@ -1765,7 +2159,7 @@ def export_planning_excel(planning_id):
     
     response = make_response(buffer.getvalue())
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    response.headers['Content-Disposition'] = f'attachment; filename=planning_semaine_{planning.semaine}_{planning.annee}.xlsx'
+    response.headers['Content-Disposition'] = f'attachment; filename=planning_S{planning.semaine}_{planning.annee}.xlsx'
     
     return response
 
